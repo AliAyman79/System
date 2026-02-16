@@ -5,7 +5,6 @@ import dlindustries.vigillant.system.module.Category;
 import dlindustries.vigillant.system.module.Module;
 import dlindustries.vigillant.system.utils.EncryptedString;
 import dlindustries.vigillant.system.utils.WorldUtils;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.decoration.EndCrystalEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
@@ -62,9 +61,7 @@ public final class CrystalOptimizer extends Module implements PacketSendListener
 							if (!(weakness == null || strength != null && strength.getAmplifier() > weakness.getAmplifier() || WorldUtils.isTool(mc.player.getMainHandStack())))
 								return;
 
-							hit.getEntity().kill();
-							hit.getEntity().setRemoved(Entity.RemovalReason.KILLED);
-							hit.getEntity().onRemoved();
+							hit.getEntity().discard();
 						}
 					}
 				}

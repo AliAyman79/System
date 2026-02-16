@@ -10,6 +10,7 @@ import dlindustries.vigillant.system.utils.Utils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -161,9 +162,10 @@ public final class ClickGui extends Screen {
 				int imageY = screenHeight - imageHeight;
 
 				context.drawTexture(
+						RenderLayer::getGuiTextured,
 						BACKGROUND_IMAGE,
 						imageX, imageY,
-						0, 0,
+						0.0f, 0.0f,
 						imageWidth, imageHeight,
 						imageWidth, imageHeight
 				);

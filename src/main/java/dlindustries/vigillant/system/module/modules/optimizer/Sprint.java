@@ -49,10 +49,9 @@ public final class Sprint extends Module implements TickListener {
         }
 
         if (shouldSprint) {
-            mc.player.setSprinting(mc.player.input.pressingForward);
+            mc.player.setSprinting(mc.player.input.movementForward > 0.0f);
         } else {
             mc.player.setSprinting(false);
         }
     }
 }
-

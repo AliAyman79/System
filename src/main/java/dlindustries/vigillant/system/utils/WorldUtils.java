@@ -8,7 +8,6 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.item.*;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -89,13 +88,8 @@ public final class WorldUtils {
 			ItemStack stack = itemEntity.getStack();
 			Item item = stack.getItem();
 			int count = stack.getCount();
-			if (item instanceof ArmorItem armor) {
-				RegistryEntry<ArmorMaterial> matEntry = armor.getMaterial();
-				ArmorMaterial mat = matEntry.value();
-				if (mat.equals(ArmorMaterials.DIAMOND.value())
-						|| mat.equals(ArmorMaterials.NETHERITE.value())) {
-					valuableArmorCount++;
-				}
+			if (isDiamondOrNetheriteArmor(item)) {
+				valuableArmorCount++;
 			}
 			else if (count > 32 && (item == Items.END_CRYSTAL
 					|| item == Items.OBSIDIAN
@@ -167,7 +161,7 @@ public final class WorldUtils {
 
 	public static void placeBlock(BlockHitResult blockHit, boolean swingHand) {
 		ActionResult result = mc.interactionManager.interactBlock(mc.player, Hand.MAIN_HAND, blockHit);
-		if (result.isAccepted() && result.shouldSwingHand() && swingHand) mc.player.swingHand(Hand.MAIN_HAND);
+		if (result.isAccepted() && swingHand) mc.player.swingHand(Hand.MAIN_HAND);
 	}
 
 	public static Stream<WorldChunk> getLoadedChunks() {
@@ -227,11 +221,20 @@ public final class WorldUtils {
 	}
 
 	public static boolean isTool(ItemStack itemStack) {
-		if (!(itemStack.getItem() instanceof ToolItem)) {
-			return false;
-		}
-		ToolMaterial material = ((ToolItem) itemStack.getItem()).getMaterial();
-		return material == ToolMaterials.DIAMOND || material == ToolMaterials.NETHERITE;
+		Item item = itemStack.getItem();
+		return item == Items.DIAMOND_SWORD || item == Items.NETHERITE_SWORD
+				|| item == Items.DIAMOND_AXE || item == Items.NETHERITE_AXE
+				|| item == Items.DIAMOND_PICKAXE || item == Items.NETHERITE_PICKAXE
+				|| item == Items.DIAMOND_SHOVEL || item == Items.NETHERITE_SHOVEL
+				|| item == Items.DIAMOND_HOE || item == Items.NETHERITE_HOE
+				|| item == Items.MACE;
+	}
+
+	private static boolean isDiamondOrNetheriteArmor(Item item) {
+		return item == Items.DIAMOND_HELMET || item == Items.DIAMOND_CHESTPLATE
+				|| item == Items.DIAMOND_LEGGINGS || item == Items.DIAMOND_BOOTS
+				|| item == Items.NETHERITE_HELMET || item == Items.NETHERITE_CHESTPLATE
+				|| item == Items.NETHERITE_LEGGINGS || item == Items.NETHERITE_BOOTS;
 	}
 
 	public static boolean isCrit(PlayerEntity player, Entity target) {

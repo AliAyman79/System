@@ -8,7 +8,6 @@ import dlindustries.vigillant.system.module.setting.BooleanSetting;
 import dlindustries.vigillant.system.module.setting.NumberSetting;
 import dlindustries.vigillant.system.utils.EncryptedString;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.item.*;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -61,10 +60,7 @@ public final class HitOptimizer extends Module implements AttackListener, TickLi
         if (target == null) return;
 
         ItemStack currentStack = mc.player.getMainHandStack();
-        Item currentItem = currentStack.getItem();
-
-
-        if (isWeapon(currentItem)) return;
+        if (isWeapon(currentStack)) return;
 
 
         if (shouldSwitchBack) {
@@ -113,12 +109,18 @@ public final class HitOptimizer extends Module implements AttackListener, TickLi
         switchTimer = 0;
     }
 
-    private boolean isWeapon(Item item) {
+    private boolean isWeapon(ItemStack stack) {
+        Item item = stack.getItem();
         return item instanceof SwordItem ||
                 item instanceof AxeItem ||
                 item instanceof MaceItem ||
-                item instanceof ElytraItem ||
-                (item instanceof ArmorItem && ((ArmorItem) item).getSlotType() == EquipmentSlot.CHEST);
+                item == Items.ELYTRA ||
+                item == Items.LEATHER_CHESTPLATE ||
+                item == Items.CHAINMAIL_CHESTPLATE ||
+                item == Items.IRON_CHESTPLATE ||
+                item == Items.GOLDEN_CHESTPLATE ||
+                item == Items.DIAMOND_CHESTPLATE ||
+                item == Items.NETHERITE_CHESTPLATE;
     }
 
     private int findSwordSlot() {
