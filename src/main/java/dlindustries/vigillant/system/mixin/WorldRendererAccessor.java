@@ -11,9 +11,9 @@ public interface WorldRendererAccessor {
 	@Accessor("chunks")
 	BuiltChunkStorage getChunks();
 
-	@Accessor
+	@Accessor("capturedFrustum")
 	Frustum getFrustum();
 
-	@Accessor
+	@Accessor("capturedFrustum")
 	void setFrustum(Frustum frustum);
 }

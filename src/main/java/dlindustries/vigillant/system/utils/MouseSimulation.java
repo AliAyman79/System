@@ -2,6 +2,7 @@ package dlindustries.vigillant.system.utils;
 
 import dlindustries.vigillant.system.mixin.MinecraftClientAccessor;
 import dlindustries.vigillant.system.mixin.MouseHandlerAccessor;
+import net.minecraft.client.input.MouseInput;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.HashMap;
@@ -26,11 +27,12 @@ public final class MouseSimulation {
 
 	public static void mousePress(int keyCode) {
 		mouseButtons.put(keyCode, true);
-		getMouseHandler().press(mc.getWindow().getHandle(), keyCode, GLFW.GLFW_PRESS, 0);
+		getMouseHandler().press(mc.getWindow().getHandle(), new MouseInput(keyCode, 0), GLFW.GLFW_PRESS);
 	}
 
 	public static void mouseRelease(int keyCode) {
-		getMouseHandler().press(mc.getWindow().getHandle(), keyCode, GLFW.GLFW_RELEASE, 0);
+		mouseButtons.put(keyCode, false);
+		getMouseHandler().press(mc.getWindow().getHandle(), new MouseInput(keyCode, 0), GLFW.GLFW_RELEASE);
 	}
 
 	public static void mouseClick(int keyCode, int millis) {

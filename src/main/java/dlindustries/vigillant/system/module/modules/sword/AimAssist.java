@@ -15,7 +15,8 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.MaceItem;
-import net.minecraft.item.SwordItem;
+import net.minecraft.item.ItemStack;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -155,12 +156,12 @@ public final class AimAssist extends Module implements HudListener, MouseMoveLis
 				break;
 
 			case WEAPONS_ONLY:
-				if (!(heldItem instanceof SwordItem || heldItem instanceof AxeItem))
+				if (!(isSword(heldItem) || heldItem instanceof AxeItem))
 					return;
 				break;
 
 			case MACE_AND_WEAPONS:
-				if (!(heldItem instanceof SwordItem || heldItem instanceof AxeItem || heldItem instanceof MaceItem))
+				if (!(isSword(heldItem) || heldItem instanceof AxeItem || heldItem instanceof MaceItem))
 					return;
 				break;
 
@@ -184,7 +185,8 @@ public final class AimAssist extends Module implements HudListener, MouseMoveLis
 			resetSpeed.reset();
 		}
 
-		Vec3d targetPos = posMode.isMode(PosMode.Normal) ? target.getPos() : target.getLerpedPos(RenderTickCounter.ONE.getTickDelta(true));
+		float tickDelta = mc.getRenderTickCounter().getDynamicDeltaTicks();
+		Vec3d targetPos = posMode.isMode(PosMode.Normal) ? new Vec3d(target.getX(), target.getY(), target.getZ()) : target.getLerpedPos(tickDelta);
 
 		if (aimAt.isMode(AimMode.Chest))
 			targetPos = targetPos.add(0, -0.5, 0);
@@ -220,8 +222,8 @@ public final class AimAssist extends Module implements HudListener, MouseMoveLis
 		}
 
 		if (lerp.isMode(LerpMode.EaseOut)) {
-			yaw = (float) easeOutBackDegrees(mc.player.getYaw(), rotation.yaw(), yawStrength * RenderTickCounter.ONE.getLastFrameDuration());
-			pitch = (float) easeOutBackDegrees(mc.player.getPitch(), rotation.pitch(), pitchStrength * RenderTickCounter.ONE.getLastFrameDuration());
+			yaw = (float) easeOutBackDegrees(mc.player.getYaw(), rotation.yaw(), yawStrength * tickDelta);
+			pitch = (float) easeOutBackDegrees(mc.player.getPitch(), rotation.pitch(), pitchStrength * tickDelta);
 		}
 
 		if (MathUtils.randomInt(1, 100) <= randomization.getValueInt()) {
@@ -241,6 +243,10 @@ public final class AimAssist extends Module implements HudListener, MouseMoveLis
 				}
 			}
 		}
+	}
+
+	private boolean isSword(Item item) {
+		return new ItemStack(item).isIn(ItemTags.SWORDS);
 	}
 
 	public float lerp(float delta, float start, float end) {

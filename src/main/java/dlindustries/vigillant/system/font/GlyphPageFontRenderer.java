@@ -1,6 +1,7 @@
 package dlindustries.vigillant.system.font;
 
-import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import dlindustries.vigillant.system.utils.EncryptedString;
 import net.minecraft.client.render.*;
 import net.minecraft.client.util.math.MatrixStack;
@@ -305,7 +306,6 @@ public final class GlyphPageFontRenderer {
 		matrices.scale(0.5F, 0.5F, 0.5F);
 
 		GlStateManager._enableBlend();
-		GlStateManager._blendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		glyphPage.bindTexture();
 
@@ -381,7 +381,6 @@ public final class GlyphPageFontRenderer {
 		matrices.scale(scale, scale, scale);
 
 		GlStateManager._enableBlend();
-		GlStateManager._blendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		glyphPage.bindTexture();
 
@@ -453,7 +452,7 @@ public final class GlyphPageFontRenderer {
 			bufferBuilder.vertex(this.posX + f, this.posY + (float) (glyphPage.getMaxFontHeight() / 2), 0.0F);
 			bufferBuilder.vertex(this.posX + f, this.posY + (float) (glyphPage.getMaxFontHeight() / 2) - 1.0F, 0.0F);
 			bufferBuilder.vertex(this.posX, this.posY + (float) (glyphPage.getMaxFontHeight() / 2) - 1.0F, 0.0F);
-			BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
+			bufferBuilder.end();
 		}
 
 		if (this.underlineStyle) {
@@ -463,7 +462,7 @@ public final class GlyphPageFontRenderer {
 			bufferBuilder.vertex(this.posX + f, this.posY + (float) glyphPage.getMaxFontHeight(), 0.0F);
 			bufferBuilder.vertex(this.posX + f, this.posY + (float) glyphPage.getMaxFontHeight() - 1.0F, 0.0F);
 			bufferBuilder.vertex(this.posX + (float) l, this.posY + (float) glyphPage.getMaxFontHeight() - 1.0F, 0.0F);
-			BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
+			bufferBuilder.end();
 		}
 
 		this.posX += f;

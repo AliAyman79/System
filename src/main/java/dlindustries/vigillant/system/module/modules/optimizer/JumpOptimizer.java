@@ -35,7 +35,7 @@ public final class JumpOptimizer extends Module implements TickListener {
 		if (mc.currentScreen != null || mc.player == null)
 			return;
 
-		FluidState fluidState = mc.player.getWorld().getFluidState(mc.player.getBlockPos());
+		FluidState fluidState = mc.world.getFluidState(mc.player.getBlockPos());
 		if (fluidState.isIn(FluidTags.WATER) || fluidState.isIn(FluidTags.LAVA)) {
 			wasJumping = false;
 			return;

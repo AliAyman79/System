@@ -13,6 +13,8 @@ import dlindustries.vigillant.system.utils.Utils;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.input.CharInput;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
@@ -84,16 +86,17 @@ public final class StringBox extends RenderableSetting {
                 }
 
                 @Override
-                public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+                public boolean keyPressed(KeyInput keyInput) {
+                    int keyCode = keyInput.key();
                     if(keyCode == GLFW.GLFW_KEY_ESCAPE) {
                         setting.setValue(content.strip());
                         mc.setScreen(system.INSTANCE.clickGui);
                     }
 
-                    if(isPaste(keyCode))
+                    if(keyInput.isPaste())
                         content += mc.keyboard.getClipboard();
 
-                    if(isCopy(keyCode))
+                    if(keyInput.isCopy())
                         GLFW.glfwSetClipboardString(mc.getWindow().getHandle(), content);
 
                     if(keyCode == GLFW.GLFW_KEY_BACKSPACE) {
@@ -102,16 +105,16 @@ public final class StringBox extends RenderableSetting {
                         }
                     }
 
-                    return super.keyPressed(keyCode, scanCode, modifiers);
+                    return super.keyPressed(keyInput);
                 }
 
                 public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
                 }
 
                 @Override
-                public boolean charTyped(char chr, int modifiers) {
-                    content += chr;
-                    return super.charTyped(chr, modifiers);
+                public boolean charTyped(CharInput charInput) {
+                    content += (char) charInput.codepoint();
+                    return super.charTyped(charInput);
                 }
 
                 @Override

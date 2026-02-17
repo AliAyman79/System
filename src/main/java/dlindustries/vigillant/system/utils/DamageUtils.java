@@ -148,7 +148,7 @@ public class DamageUtils {
 		if (target == null) return 0f;
 		if (target instanceof PlayerEntity player && getGameMode(player) == GameMode.CREATIVE) return 0f;
 
-		Vec3d position = predictMovement ? target.getPos().add(target.getVelocity()) : target.getPos();
+		Vec3d position = predictMovement ? new Vec3d(target.getX(), target.getY(), target.getZ()).add(target.getVelocity()) : new Vec3d(target.getX(), target.getY(), target.getZ());
 
 		Box box = target.getBoundingBox();
 		if (predictMovement) box = box.offset(target.getVelocity());
@@ -197,7 +197,7 @@ public class DamageUtils {
 		if (entity.hasStatusEffect(StatusEffects.SLOW_FALLING) || entity.hasStatusEffect(StatusEffects.LEVITATION)) return 0f;
 		int surface = mc.world.getWorldChunk(entity.getBlockPos()).getHeightmap(Heightmap.Type.MOTION_BLOCKING).get(entity.getBlockX() & 15, entity.getBlockZ() & 15);
 		if (entity.getBlockY() >= surface) return fallDamageReductions(entity, surface);
-		BlockHitResult raycastResult = mc.world.raycast(new RaycastContext(entity.getPos(), new Vec3d(entity.getX(), mc.world.getBottomY(), entity.getZ()), RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.WATER, entity));
+		BlockHitResult raycastResult = mc.world.raycast(new RaycastContext(new Vec3d(entity.getX(), entity.getY(), entity.getZ()), new Vec3d(entity.getX(), mc.world.getBottomY(), entity.getZ()), RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.WATER, entity));
 		if (raycastResult.getType() == HitResult.Type.MISS) return 0;
 
 		return fallDamageReductions(entity, raycastResult.getBlockPos().getY());

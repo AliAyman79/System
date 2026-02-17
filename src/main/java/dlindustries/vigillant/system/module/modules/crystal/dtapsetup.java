@@ -14,7 +14,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.item.SwordItem;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import org.lwjgl.glfw.GLFW;
@@ -80,7 +80,7 @@ public final class dtapsetup extends Module implements TickListener, ItemUseList
 
 			ItemStack mainHandStack = mc.player.getMainHandStack();
 
-			if (!(mainHandStack.getItem() instanceof SwordItem || (workWithTotem.getValue() && mainHandStack.isOf(Items.TOTEM_OF_UNDYING)) || workWithCrystal.getValue() && mainHandStack.isOf(Items.END_CRYSTAL)) && !active)
+			if (!(mainHandStack.isIn(ItemTags.SWORDS) || (workWithTotem.getValue() && mainHandStack.isOf(Items.TOTEM_OF_UNDYING)) || workWithCrystal.getValue() && mainHandStack.isOf(Items.END_CRYSTAL)) && !active)
 				return;
 			else if(mc.crosshairTarget instanceof BlockHitResult hitResult && !active) {
 				if(swordSwap.getValue()) {

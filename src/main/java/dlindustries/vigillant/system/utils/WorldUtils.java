@@ -1,5 +1,6 @@
 package dlindustries.vigillant.system.utils;
 
+import dlindustries.vigillant.system.system;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
@@ -53,15 +54,18 @@ public final class WorldUtils {
 	}
 
 	public static PlayerEntity findNearestPlayer(PlayerEntity toPlayer, float range, boolean seeOnly, boolean excludeFriends) {
+		if (toPlayer == null || mc.world == null) return null;
+
 		float minRange = Float.MAX_VALUE;
 		PlayerEntity minPlayer = null;
 
 		for (PlayerEntity player : mc.world.getPlayers()) {
-			float distance = (float) distance(toPlayer.getPos(), player.getPos());
-
-
-
-			if (player != toPlayer && distance <= range && player.canSee(toPlayer) == seeOnly) {
+			float distance = (float) distance(new Vec3d(toPlayer.getX(), toPlayer.getY(), toPlayer.getZ()), new Vec3d(player.getX(), player.getY(), player.getZ()));
+			if (player == toPlayer) continue;
+			if (excludeFriends && system.INSTANCE != null && system.INSTANCE.getFriendManager() != null && system.INSTANCE.getFriendManager().isFriend(player)) {
+				continue;
+			}
+			if (distance <= range && toPlayer.canSee(player) == seeOnly) {
 				if (distance < minRange) {
 					minRange = distance;
 					minPlayer = player;
@@ -83,7 +87,7 @@ public final class WorldUtils {
 		int valuableArmorCount = 0;
 		for (Entity entity : mc.world.getEntities()) {
 			if (!(entity instanceof ItemEntity itemEntity)) continue;
-			if (!area.contains(entity.getPos())) continue;
+			if (!area.contains(new Vec3d(entity.getX(), entity.getY(), entity.getZ()))) continue;
 
 			ItemStack stack = itemEntity.getStack();
 			Item item = stack.getItem();
@@ -125,7 +129,7 @@ public final class WorldUtils {
 		if (entity == null || mc.world == null) return null;
 
 		double d = distance;
-		Vec3d cameraPosVec = entity.getCameraPosVec(RenderTickCounter.ONE.getTickDelta(true));
+		Vec3d cameraPosVec = entity.getCameraPosVec(mc.getRenderTickCounter().getDynamicDeltaTicks());
 		Vec3d rotationVec = getPlayerLookVec(yaw, pitch);
 		Vec3d range = cameraPosVec.add(rotationVec.x * d, rotationVec.y * d, rotationVec.z * d);
 
@@ -148,7 +152,7 @@ public final class WorldUtils {
 			Vec3d vec3d4 = entityHitResult.getPos();
 			double g = cameraPosVec.squaredDistanceTo(vec3d4);
 
-			if ((distance > distance && g > Math.pow(distance, 2)) || (g < e || result == null)) {
+			if ((distance > 0.0 && g > Math.pow(distance, 2)) || (g < e || result == null)) {
 				result = g > Math.pow(distance, 2)
 						? BlockHitResult.createMissed(vec3d4, Direction.getFacing(rotationVec.x, rotationVec.y, rotationVec.z), BlockPos.ofFloored(vec3d4))
 						: entityHitResult;
@@ -200,8 +204,8 @@ public final class WorldUtils {
 
 	public static boolean isShieldFacingAway(PlayerEntity player) {
 		if (mc.player != null && player != null) {
-			Vec3d playerPos = mc.player.getPos();
-			Vec3d targetPos = player.getPos();
+			Vec3d playerPos = new Vec3d(mc.player.getX(), mc.player.getY(), mc.player.getZ());
+			Vec3d targetPos = new Vec3d(player.getX(), player.getY(), player.getZ());
 
 			Vec3d directionToPlayer = playerPos.subtract(targetPos).normalize();
 

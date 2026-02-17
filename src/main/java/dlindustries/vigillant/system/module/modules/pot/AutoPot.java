@@ -81,7 +81,7 @@ public final class AutoPot extends Module implements TickListener {
 					return;
 				}
 
-				if (goToPrevSlot.getValue() && prevSlot == -1) prevSlot = mc.player.getInventory().selectedSlot;
+				if (goToPrevSlot.getValue() && prevSlot == -1) prevSlot = mc.player.getInventory().getSelectedSlot();
 				if (lookDown.getValue() && prevPitch < 0) prevPitch = mc.player.getPitch();
 
 				int potSlot = InventoryUtils.findSplash(StatusEffects.INSTANT_HEALTH.value(), 1, 1);

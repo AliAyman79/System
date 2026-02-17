@@ -1,228 +1,174 @@
 package dlindustries.vigillant.system.module.modules.render;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import dlindustries.vigillant.system.event.events.GameRenderListener;
 import dlindustries.vigillant.system.event.events.PacketReceiveListener;
 import dlindustries.vigillant.system.module.Category;
 import dlindustries.vigillant.system.module.Module;
 import dlindustries.vigillant.system.module.setting.BooleanSetting;
 import dlindustries.vigillant.system.module.setting.NumberSetting;
 import dlindustries.vigillant.system.utils.EncryptedString;
-import dlindustries.vigillant.system.utils.RenderUtils;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.entity.*;
-import net.minecraft.client.render.*;
-import net.minecraft.client.util.math.MatrixStack;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.minecraft.block.entity.BarrelBlockEntity;
+import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.ChestBlockEntity;
+import net.minecraft.block.entity.EnderChestBlockEntity;
+import net.minecraft.block.entity.EnchantingTableBlockEntity;
+import net.minecraft.block.entity.FurnaceBlockEntity;
+import net.minecraft.block.entity.MobSpawnerBlockEntity;
+import net.minecraft.block.entity.ShulkerBoxBlockEntity;
+import net.minecraft.block.entity.TrappedChestBlockEntity;
+import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.DrawStyle;
+import net.minecraft.client.render.GameRenderer;
+import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.network.packet.s2c.play.ChunkDeltaUpdateS2CPacket;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
-import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.Heightmap;
 import net.minecraft.world.chunk.WorldChunk;
-import org.lwjgl.opengl.GL11;
+import net.minecraft.world.debug.gizmo.GizmoDrawing;
+
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
 
-public final class StorageEsp extends Module implements GameRenderListener, PacketReceiveListener {
-    private final BooleanSetting tracers = new BooleanSetting("Tracers", false)
-            .setDescription("Draws lines from player to storage blocks");
+public final class StorageEsp extends Module implements PacketReceiveListener {
     private final BooleanSetting donutBypass = new BooleanSetting("Possible Bypass", false)
-            .setDescription("Prevents chunk updates from anti esp");
-    private final NumberSetting transparency = new NumberSetting("Transparency", 1, 255, 80, 1)
-            .setDescription("Opacity of the ESP boxes");
-    private final BooleanSetting renderOutline = new BooleanSetting("Outline Only", false)
-            .setDescription("Render outlined boxes instead of filled");
-    private final StorageEspGroup chests = new StorageEspGroup("Chests", new Color(156, 91, 0));
-    private final StorageEspGroup trappedChests = new StorageEspGroup("Trapped Chests", new Color(200, 91, 0));
-    private final StorageEspGroup enderChests = new StorageEspGroup("Ender Chests", new Color(131, 44, 236));
-    private final StorageEspGroup shulkers = new StorageEspGroup("Shulkers", new Color(0, 153, 158));
-    private final StorageEspGroup furnaces = new StorageEspGroup("Furnaces", new Color(125, 125, 125));
-    private final StorageEspGroup barrels = new StorageEspGroup("Barrels", new Color(255, 0, 0));
-    private final StorageEspGroup enchantTables = new StorageEspGroup("Enchant Tables", new Color(80, 80, 255));
-    private final StorageEspGroup spawners = new StorageEspGroup("Spawners", new Color(27, 207, 0));
-    private final StorageEspGroup anvils = new StorageEspGroup("Anvils (LAGGY)", new Color(0, 0, 0));
+            .setDescription("Cancels chunk delta packets used by anti-ESP checks");
+    private final NumberSetting range = new NumberSetting("Range", 8, 256, 96, 1)
+            .setDescription("Maximum render distance");
+    private final NumberSetting fillAlpha = new NumberSetting("Fill Alpha", 0, 255, 70, 1)
+            .setDescription("Fill opacity");
+    private final NumberSetting outlineAlpha = new NumberSetting("Outline Alpha", 0, 255, 220, 1)
+            .setDescription("Outline opacity");
+    private final BooleanSetting solid = new BooleanSetting("Solid", true)
+            .setDescription("Draw filled boxes");
 
-    private final List<StorageEspGroup> groups = List.of(
-            chests, trappedChests, enderChests, shulkers,
-            furnaces, barrels, enchantTables, spawners, anvils
-    );
-    private int tickCounter = 0;
-    private static final int ANVIL_UPDATE_INTERVAL = 200;
-    private final List<BlockPos> anvilCache = new ArrayList<>();
+    private final BooleanSetting chests = new BooleanSetting("Chests", true);
+    private final BooleanSetting trappedChests = new BooleanSetting("Trapped Chests", true);
+    private final BooleanSetting enderChests = new BooleanSetting("Ender Chests", true);
+    private final BooleanSetting shulkers = new BooleanSetting("Shulkers", true);
+    private final BooleanSetting barrels = new BooleanSetting("Barrels", true);
+    private final BooleanSetting furnaces = new BooleanSetting("Furnaces", false);
+    private final BooleanSetting enchantTables = new BooleanSetting("Enchant Tables", false);
+    private final BooleanSetting spawners = new BooleanSetting("Spawners", false);
+
+    private boolean worldRenderHookRegistered;
 
     public StorageEsp() {
         super(EncryptedString.of("Storage ESP"),
-                EncryptedString.of("Renders Storage through walls"),
+                EncryptedString.of("Renders storage blocks through walls"),
                 -1,
                 Category.RENDER);
-        addSettings(donutBypass, transparency, tracers, renderOutline);
-        groups.forEach(group -> addSetting(group.enabled));
+
+        addSettings(
+                donutBypass,
+                range,
+                fillAlpha,
+                outlineAlpha,
+                solid,
+                chests,
+                trappedChests,
+                enderChests,
+                shulkers,
+                barrels,
+                furnaces,
+                enchantTables,
+                spawners
+        );
+
+        registerWorldRenderHook();
     }
 
     @Override
     public void onEnable() {
-        eventManager.add(GameRenderListener.class, this);
         eventManager.add(PacketReceiveListener.class, this);
-        anvilCache.clear();
-        tickCounter = 0;
     }
 
     @Override
     public void onDisable() {
-        eventManager.remove(GameRenderListener.class, this);
         eventManager.remove(PacketReceiveListener.class, this);
-        anvilCache.clear();
     }
 
-    @Override
-    public void onGameRender(GameRenderListener.GameRenderEvent event) {
-        if (mc.world == null || mc.player == null) return;
+    private void registerWorldRenderHook() {
+        if (worldRenderHookRegistered) return;
+        worldRenderHookRegistered = true;
+        WorldRenderEvents.BEFORE_DEBUG_RENDER.register(this::onWorldRender);
+    }
 
+    private void onWorldRender(WorldRenderContext context) {
+        if (!isEnabled() || mc.world == null || mc.player == null) return;
+        WorldRenderer worldRenderer = context.worldRenderer();
+        GameRenderer gameRenderer = context.gameRenderer();
+        if (worldRenderer == null || gameRenderer == null) return;
+        Camera camera = gameRenderer.getCamera();
+        if (camera == null) return;
 
-        groups.forEach(StorageEspGroup::clear);
-
-
-        if (anvils.isEnabled()) {
-            tickCounter++;
-            if (tickCounter >= ANVIL_UPDATE_INTERVAL) {
-                updateAnvilCache();
-                tickCounter = 0;
-            }
-            anvils.positions.addAll(anvilCache);
-        }
-
-        int viewDist = mc.options.getClampedViewDistance();
+        float tickDelta = mc.getRenderTickCounter().getDynamicDeltaTicks();
+        double rangeSq = range.getValue() * range.getValue();
+        int chunkRadius = Math.max(1, (int) Math.ceil(range.getValue() / 16.0));
         int playerChunkX = mc.player.getChunkPos().x;
         int playerChunkZ = mc.player.getChunkPos().z;
 
-        for (int cx = playerChunkX - viewDist; cx <= playerChunkX + viewDist; cx++) {
-            for (int cz = playerChunkZ - viewDist; cz <= playerChunkZ + viewDist; cz++) {
-                WorldChunk chunk = mc.world.getChunkManager().getWorldChunk(cx, cz, false);
-                if (chunk != null) {
-                    processChunk(chunk);
-                }
-            }
-        }
+        try (var ignored = worldRenderer.startDrawingGizmos()) {
+            for (int chunkX = playerChunkX - chunkRadius; chunkX <= playerChunkX + chunkRadius; chunkX++) {
+                for (int chunkZ = playerChunkZ - chunkRadius; chunkZ <= playerChunkZ + chunkRadius; chunkZ++) {
+                    WorldChunk chunk = mc.world.getChunkManager().getWorldChunk(chunkX, chunkZ, false);
+                    if (chunk == null) continue;
 
+                    for (BlockPos pos : chunk.getBlockEntityPositions()) {
+                        BlockEntity blockEntity = mc.world.getBlockEntity(pos);
+                        StorageStyle style = getStyle(blockEntity);
+                        if (style == null) continue;
 
-        renderStorages(event);
-    }
+                        Vec3d center = Vec3d.ofCenter(pos);
+                        if (mc.player.squaredDistanceTo(center) > rangeSq) continue;
 
-    private void updateAnvilCache() {
-        anvilCache.clear();
-        if (!anvils.isEnabled()) return;
+                        int fillColor = withAlpha(style.color(), fillAlpha.getValueInt()).getRGB();
+                        int outlineColor = withAlpha(style.color(), outlineAlpha.getValueInt()).getRGB();
+                        DrawStyle drawStyle = solid.getValue()
+                                ? DrawStyle.filledAndStroked(outlineColor, 1.5f, fillColor)
+                                : DrawStyle.stroked(outlineColor, 1.5f);
 
-        int viewDist = mc.options.getClampedViewDistance();
-        int playerChunkX = mc.player.getChunkPos().x;
-        int playerChunkZ = mc.player.getChunkPos().z;
-
-        for (int cx = playerChunkX - viewDist; cx <= playerChunkX + viewDist; cx++) {
-            for (int cz = playerChunkZ - viewDist; cz <= playerChunkZ + viewDist; cz++) {
-                WorldChunk chunk = mc.world.getChunkManager().getWorldChunk(cx, cz, false);
-                if (chunk != null) {
-                    scanChunkForAnvils(chunk);
-                }
-            }
-        }
-    }
-
-    private void scanChunkForAnvils(WorldChunk chunk) {
-        int startX = chunk.getPos().x * 16;
-        int startZ = chunk.getPos().z * 16;
-        int endX = startX + 15;
-        int endZ = startZ + 15;
-
-        for (int x = startX; x <= endX; x++) {
-            for (int z = startZ; z <= endZ; z++) {
-
-                int topY = mc.world.getTopY(Heightmap.Type.MOTION_BLOCKING, x, z);
-                for (int y = topY; y >= mc.world.getBottomY() + 10; y--) {
-                    BlockPos pos = new BlockPos(x, y, z);
-                    Block block = mc.world.getBlockState(pos).getBlock();
-                    if (block == Blocks.ANVIL || block == Blocks.CHIPPED_ANVIL || block == Blocks.DAMAGED_ANVIL) {
-                        anvilCache.add(pos);
-                        break;
+                        Box worldBox = new Box(pos);
+                        GizmoDrawing.box(worldBox, drawStyle).ignoreOcclusion();
                     }
                 }
             }
         }
     }
 
-    private void processChunk(WorldChunk chunk) {
-        for (BlockPos pos : chunk.getBlockEntityPositions()) {
-            BlockEntity blockEntity = mc.world.getBlockEntity(pos);
-            if (blockEntity == null) continue;
+    private StorageStyle getStyle(BlockEntity blockEntity) {
+        if (blockEntity == null) return null;
 
-            if (blockEntity instanceof TrappedChestBlockEntity && trappedChests.isEnabled()) {
-                trappedChests.add(pos);
-            } else if (blockEntity instanceof ChestBlockEntity && chests.isEnabled()) {
-                chests.add(pos);
-            } else if (blockEntity instanceof EnderChestBlockEntity && enderChests.isEnabled()) {
-                enderChests.add(pos);
-            } else if (blockEntity instanceof ShulkerBoxBlockEntity && shulkers.isEnabled()) {
-                shulkers.add(pos);
-            } else if (blockEntity instanceof FurnaceBlockEntity && furnaces.isEnabled()) {
-                furnaces.add(pos);
-            } else if (blockEntity instanceof BarrelBlockEntity && barrels.isEnabled()) {
-                barrels.add(pos);
-            } else if (blockEntity instanceof EnchantingTableBlockEntity && enchantTables.isEnabled()) {
-                enchantTables.add(pos);
-            } else if (blockEntity instanceof MobSpawnerBlockEntity && spawners.isEnabled()) {
-                spawners.add(pos);
-            }
+        if (trappedChests.getValue() && blockEntity instanceof TrappedChestBlockEntity) {
+            return new StorageStyle(new Color(200, 91, 0));
         }
+        if (chests.getValue() && blockEntity instanceof ChestBlockEntity) {
+            return new StorageStyle(new Color(156, 91, 0));
+        }
+        if (enderChests.getValue() && blockEntity instanceof EnderChestBlockEntity) {
+            return new StorageStyle(new Color(131, 44, 236));
+        }
+        if (shulkers.getValue() && blockEntity instanceof ShulkerBoxBlockEntity) {
+            return new StorageStyle(new Color(0, 153, 158));
+        }
+        if (barrels.getValue() && blockEntity instanceof BarrelBlockEntity) {
+            return new StorageStyle(new Color(255, 0, 0));
+        }
+        if (furnaces.getValue() && blockEntity instanceof FurnaceBlockEntity) {
+            return new StorageStyle(new Color(125, 125, 125));
+        }
+        if (enchantTables.getValue() && blockEntity instanceof EnchantingTableBlockEntity) {
+            return new StorageStyle(new Color(80, 80, 255));
+        }
+        if (spawners.getValue() && blockEntity instanceof MobSpawnerBlockEntity) {
+            return new StorageStyle(new Color(27, 207, 0));
+        }
+
+        return null;
     }
 
-    private void renderStorages(GameRenderListener.GameRenderEvent event) {
-        MatrixStack matrices = event.matrices;
-        Camera camera = mc.gameRenderer.getCamera();
-        Vec3d cameraPos = camera.getPos();
-        RenderSystem.disableCull();
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.depthFunc(GL11.GL_ALWAYS);  // Render through walls
-
-        matrices.push();
-        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(camera.getPitch()));
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(camera.getYaw() + 180));
-        matrices.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
-
-        for (StorageEspGroup group : groups) {
-            if (!group.isEnabled()) continue;
-
-            Color baseColor = group.color;
-            Color boxColor = new Color(
-                    baseColor.getRed(),
-                    baseColor.getGreen(),
-                    baseColor.getBlue(),
-                    transparency.getValueInt()
-            );
-
-            for (BlockPos pos : group.positions) {
-                Box box = new Box(pos);
-                if (renderOutline.getValue()) {
-                    RenderUtils.renderOutlinedBox(matrices, box, boxColor);
-                } else {
-                    RenderUtils.renderFilledBox(matrices, box, boxColor);
-                }
-            }
-
-            if (tracers.getValue()) {
-                Vec3d start = new Vec3d(0, 0, 0);
-                for (BlockPos pos : group.positions) {
-                    Vec3d end = Vec3d.ofCenter(pos).subtract(cameraPos);
-                    RenderUtils.renderLine(matrices, start, end, baseColor);
-                }
-            }
-        }
-
-        matrices.pop();
-        RenderSystem.depthFunc(GL11.GL_LEQUAL);
-        RenderSystem.enableCull();
-        RenderSystem.disableBlend();
+    private static Color withAlpha(Color base, int alpha) {
+        return new Color(base.getRed(), base.getGreen(), base.getBlue(), alpha);
     }
 
     @Override
@@ -232,26 +178,6 @@ public final class StorageEsp extends Module implements GameRenderListener, Pack
         }
     }
 
-    private static class StorageEspGroup {
-        private final BooleanSetting enabled;
-        private final Color color;
-        private final List<BlockPos> positions = new ArrayList<>();
-
-        public StorageEspGroup(String name, Color defaultColor) {
-            this.enabled = new BooleanSetting(name, true);
-            this.color = defaultColor;
-        }
-
-        public void add(BlockPos pos) {
-            positions.add(pos);
-        }
-
-        public void clear() {
-            positions.clear();
-        }
-
-        public boolean isEnabled() {
-            return enabled.getValue();
-        }
+    private record StorageStyle(Color color) {
     }
 }

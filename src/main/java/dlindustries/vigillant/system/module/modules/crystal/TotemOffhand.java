@@ -92,7 +92,7 @@ public final class TotemOffhand extends Module implements TickListener {
 
         if (sentSwapPacket && switchBack.getValue()) {
             if (previousSlot != -1) {
-                mc.player.getInventory().selectedSlot = previousSlot;
+                mc.player.getInventory().setSelectedSlot(previousSlot);
             }
             reset();
             return;
@@ -112,7 +112,7 @@ public final class TotemOffhand extends Module implements TickListener {
     }
 
     private void initializeSlotChange() {
-        previousSlot = mc.player.getInventory().selectedSlot;
+        previousSlot = mc.player.getInventory().getSelectedSlot();
         int baseDelay = ThreadLocalRandom.current().nextInt(
                 minSlotDelay.getValueInt(),
                 maxSlotDelay.getValueInt() + 1

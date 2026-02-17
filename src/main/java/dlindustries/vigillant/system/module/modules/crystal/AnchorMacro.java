@@ -127,7 +127,7 @@ public final class AnchorMacro extends Module implements TickListener, ItemUseLi
 					if (BlockUtils.isAnchorCharged(hit.getBlockPos())) {
 						int slot = explodeSlot.getValueInt() - 1;
 
-						if (mc.player.getInventory().selectedSlot != slot) {
+						if (mc.player.getInventory().getSelectedSlot() != slot) {
 							if (switchClock != switchDelay.getValueInt()) {
 								switchClock++;
 								return;
@@ -135,11 +135,11 @@ public final class AnchorMacro extends Module implements TickListener, ItemUseLi
 
 							if(randomInt <= switchChance.getValueInt()) {
 								switchClock = 0;
-								mc.player.getInventory().selectedSlot = slot;
+								mc.player.getInventory().setSelectedSlot(slot);
 							}
 						}
 
-						if (mc.player.getInventory().selectedSlot == slot) {
+						if (mc.player.getInventory().getSelectedSlot() == slot) {
 							if (explodeClock != explodeDelay.getValueInt()) {
 								explodeClock++;
 								return;

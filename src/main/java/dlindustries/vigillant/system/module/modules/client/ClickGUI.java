@@ -97,8 +97,6 @@ public final class ClickGUI extends Module implements PacketReceiveListener {
 		eventManager.remove(PacketReceiveListener.class, this);
 
 		if (mc.currentScreen instanceof ClickGui) {
-			system.INSTANCE.clickGui.close();
-			mc.setScreenAndRender(system.INSTANCE.previousScreen);
 			system.INSTANCE.clickGui.onGuiClose();
 		} else if (mc.currentScreen instanceof InventoryScreen) {
 			system.INSTANCE.guiInitialized = false;

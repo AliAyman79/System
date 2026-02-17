@@ -9,8 +9,9 @@ import dlindustries.vigillant.system.module.setting.ModeSetting;
 import dlindustries.vigillant.system.utils.EncryptedString;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.MaceItem; // Add this import
-import net.minecraft.item.SwordItem;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.util.hit.HitResult;
 
 public final class NoMissDelay extends Module implements AttackListener, BlockBreakingListener {
@@ -77,10 +78,10 @@ public final class NoMissDelay extends Module implements AttackListener, BlockBr
 			return !(item instanceof MaceItem); // Use instanceof directly
 		}
 		else if (mode.isMode(Mode.ONLY_WEAPONS)) {
-			return !(item instanceof SwordItem || item instanceof AxeItem || item instanceof MaceItem);
+			return !(isSword(item) || item instanceof AxeItem || item instanceof MaceItem);
 		}
 		else if (mode.isMode(Mode.MACE_AND_WEAPONS)) {
-			return !(item instanceof MaceItem) && !(item instanceof SwordItem || item instanceof AxeItem);
+			return !(item instanceof MaceItem) && !(isSword(item) || item instanceof AxeItem);
 		}
 		return false;
 	}
@@ -92,17 +93,21 @@ public final class NoMissDelay extends Module implements AttackListener, BlockBr
 			return;
 		}
 		else if (mode.isMode(Mode.ONLY_WEAPONS) &&
-				!(heldItem instanceof SwordItem || heldItem instanceof AxeItem || heldItem instanceof MaceItem)) {
+				!(isSword(heldItem) || heldItem instanceof AxeItem || heldItem instanceof MaceItem)) {
 			return;
 		}
 		else if (mode.isMode(Mode.MACE_AND_WEAPONS) &&
 				!(heldItem instanceof MaceItem) &&
-				!(heldItem instanceof SwordItem || heldItem instanceof AxeItem)) {
+				!(isSword(heldItem) || heldItem instanceof AxeItem)) {
 			return;
 		}
 
 		if (mc.crosshairTarget.getType() == HitResult.Type.BLOCK && blocks.getValue()) {
 			event.cancel();
 		}
+	}
+
+	private boolean isSword(Item item) {
+		return new ItemStack(item).isIn(ItemTags.SWORDS);
 	}
 }

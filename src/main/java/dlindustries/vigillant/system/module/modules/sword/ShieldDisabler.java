@@ -162,7 +162,7 @@ public final class ShieldDisabler extends Module implements TickListener, Attack
 		currentTarget = target;
 
 		if (originalSlot == -1) {
-			originalSlot = mc.player.getInventory().selectedSlot;
+			originalSlot = mc.player.getInventory().getSelectedSlot();
 		}
 		switchClock = switchDelay.getValueInt();
 	}
@@ -216,7 +216,7 @@ public final class ShieldDisabler extends Module implements TickListener, Attack
 		switch (stunStep) {
 			case 1: // Prepare for second hit
 				if (stunSlam.getValue()) {
-					mc.player.getInventory().selectedSlot = maceSlot.getValueInt() - 1;
+					mc.player.getInventory().setSelectedSlot(maceSlot.getValueInt() - 1);
 				}
 				stunStep = 2;
 				break;
@@ -253,11 +253,11 @@ public final class ShieldDisabler extends Module implements TickListener, Attack
 				if (switchClock > 0) {
 					switchClock--;
 				} else {
-					mc.player.getInventory().selectedSlot = originalSlot;
+					mc.player.getInventory().setSelectedSlot(originalSlot);
 					originalSlot = -1;
 				}
 			} else {
-				mc.player.getInventory().selectedSlot = originalSlot;
+				mc.player.getInventory().setSelectedSlot(originalSlot);
 				originalSlot = -1;
 			}
 		}

@@ -8,6 +8,7 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.*;
 import net.minecraft.registry.Registries;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.screen.slot.SlotActionType;
 
 import java.util.ArrayList;
@@ -20,7 +21,7 @@ import static dlindustries.vigillant.system.system.mc;
 public final class InventoryUtils {
 
 	public static void setInvSlot(int slot) {
-		mc.player.getInventory().selectedSlot = slot;
+		mc.player.getInventory().setSelectedSlot(slot);
 		((ClientPlayerInteractionManagerAccessor) mc.interactionManager).syncSlot();
 	}
 
@@ -29,7 +30,7 @@ public final class InventoryUtils {
 		for (int i = 0; i < 9; i++) {
 			ItemStack stack = inv.getStack(i);
 			if (item.test(stack.getItem())) {
-				inv.selectedSlot = i;
+				inv.setSelectedSlot(i);
 				return true;
 			}
 		}
@@ -77,7 +78,7 @@ public final class InventoryUtils {
 	public static int getSwordSlot() {
 		Inventory inv = mc.player.getInventory();
 		for (int i = 0; i < 9; i++) {
-			if (inv.getStack(i).getItem() instanceof SwordItem) {
+			if (inv.getStack(i).isIn(ItemTags.SWORDS)) {
 				return i;
 			}
 		}
@@ -128,7 +129,7 @@ public final class InventoryUtils {
 	public static int findTotemSlot() {
 		PlayerInventory inv = mc.player.getInventory();
 		for (int i = 9; i < 36; i++) {
-			if (inv.main.get(i).getItem() == Items.TOTEM_OF_UNDYING) {
+			if (inv.getMainStacks().get(i).getItem() == Items.TOTEM_OF_UNDYING) {
 				return i;
 			}
 		}
@@ -148,7 +149,7 @@ public final class InventoryUtils {
 		PlayerInventory inv = mc.player.getInventory();
 		List<Integer> totems = new ArrayList<>();
 		for (int i = 9; i < 36; i++) {
-			if (inv.main.get(i).getItem() == Items.TOTEM_OF_UNDYING) {
+			if (inv.getMainStacks().get(i).getItem() == Items.TOTEM_OF_UNDYING) {
 				totems.add(i);
 			}
 		}
@@ -163,7 +164,7 @@ public final class InventoryUtils {
 		int start = new Random().nextInt(27) + 9;
 		for (int i = 0; i < 27; i++) {
 			int idx = (start + i) % 36;
-			ItemStack stack = inv.main.get(idx);
+			ItemStack stack = inv.getMainStacks().get(idx);
 			if (stack.getItem() instanceof SplashPotionItem) {
 				if (stack.get(DataComponentTypes.POTION_CONTENTS)
 						.getEffects().toString()
@@ -185,7 +186,7 @@ public final class InventoryUtils {
 				amplifier
 		);
 		for (int i = 9; i < 36; i++) {
-			ItemStack stack = inv.main.get(i);
+			ItemStack stack = inv.getMainStacks().get(i);
 			if (stack.getItem() instanceof SplashPotionItem &&
 					stack.get(DataComponentTypes.POTION_CONTENTS)
 							.getEffects().toString()
@@ -200,7 +201,7 @@ public final class InventoryUtils {
 		PlayerInventory inv = mc.player.getInventory();
 		List<Integer> slots = new ArrayList<>();
 		for (int i = 0; i < 9; i++) {
-			if (inv.main.get(i).isEmpty()) {
+			if (inv.getMainStacks().get(i).isEmpty()) {
 				slots.add(i);
 			} else {
 				slots.remove((Integer) i);

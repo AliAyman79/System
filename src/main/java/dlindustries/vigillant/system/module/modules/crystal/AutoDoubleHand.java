@@ -17,6 +17,7 @@ import dlindustries.vigillant.system.utils.RotationUtils;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.RespawnAnchorBlock;
 import net.minecraft.entity.decoration.EndCrystalEntity;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.Items;
 import net.minecraft.util.hit.BlockHitResult;
@@ -123,13 +124,13 @@ public final class AutoDoubleHand extends Module implements HudListener {
 		PlayerInventory inventory = mc.player.getInventory();
 
 		if (checkShield.getValue() && mc.player.isBlocking()) return;
-		if (inventory.offHand.get(0).getItem() != Items.TOTEM_OF_UNDYING && onPop.getValue() && !offhandHasNoTotem) {
+        if (mc.player.getOffHandStack().getItem() != Items.TOTEM_OF_UNDYING && onPop.getValue() && !offhandHasNoTotem) {
 			offhandHasNoTotem = true;
 			int totemSlot = findItemInHotbar(Items.TOTEM_OF_UNDYING);
 			safeSelectSlot(totemSlot);
 		}
 
-		if (inventory.offHand.get(0).getItem() == Items.TOTEM_OF_UNDYING) offhandHasNoTotem = false;
+        if (mc.player.getOffHandStack().getItem() == Items.TOTEM_OF_UNDYING) offhandHasNoTotem = false;
 		if (mc.player.getHealth() <= health.getValue() && onHealth.getValue() && !belowHealth) {
 			belowHealth = true;
 			int totemSlot = findItemInHotbar(Items.TOTEM_OF_UNDYING);
@@ -158,7 +159,7 @@ public final class AutoDoubleHand extends Module implements HudListener {
 							safeSelectSlot(totemSlot);
 							return;
 						case CRITICAL:
-							if (mc.player.getInventory().offHand.get(0).getItem() != Items.TOTEM_OF_UNDYING) {
+                            if (mc.player.getOffHandStack().getItem() != Items.TOTEM_OF_UNDYING) {
 								safeSelectSlot(totemSlot);
 								return;
 							}
@@ -182,14 +183,14 @@ public final class AutoDoubleHand extends Module implements HudListener {
 				return;
 		}
 
-		Vec3d playerPos = mc.player.getPos();
+		Vec3d playerPos = new Vec3d(mc.player.getX(), mc.player.getY(), mc.player.getZ());
 		BlockPos playerBlockPos = new BlockPos((int) playerPos.x, (int) playerPos.y - (int) above, (int) playerPos.z);
 		if (!mc.world.getBlockState(new BlockPos(playerBlockPos)).isAir())
 			return;
 
 		List<EndCrystalEntity> crystals = nearbyCrystals();
 		List<Vec3d> crystalPositions = new ArrayList<>();
-		crystals.forEach(e -> crystalPositions.add(e.getPos()));
+		crystals.forEach(e -> crystalPositions.add(new Vec3d(e.getX(), e.getY(), e.getZ())));
 
 		if (predictCrystals.getValue()) {
 			Stream<BlockPos> s = BlockUtils.getAllInBoxStream(mc.player.getBlockPos().add(-6, -8, -6), mc.player.getBlockPos().add(6, 2, 6))
@@ -229,20 +230,20 @@ public final class AutoDoubleHand extends Module implements HudListener {
 	private void safeSelectSlot(int slot) {
 		if (mc.player == null) return;
 		if (slot >= 0 && slot <= 8) {
-			mc.player.getInventory().selectedSlot = slot;
+			mc.player.getInventory().setSelectedSlot(slot);
 		}
 	}
 
 	private boolean isElytraEquipped() {
-		return mc.player.getInventory().getArmorStack(2).getItem() == Items.ELYTRA;
+        return mc.player.getEquippedStack(EquipmentSlot.CHEST).getItem() == Items.ELYTRA;
 	}
 
 	private boolean hasTotemInOffhand() {
-		return mc.player.getInventory().offHand.get(0).getItem() == Items.TOTEM_OF_UNDYING;
+        return mc.player.getOffHandStack().getItem() == Items.TOTEM_OF_UNDYING;
 	}
 
 	private List<EndCrystalEntity> nearbyCrystals() {
-		Vec3d pos = mc.player.getPos();
+		Vec3d pos = new Vec3d(mc.player.getX(), mc.player.getY(), mc.player.getZ());
 		return mc.world.getEntitiesByClass(EndCrystalEntity.class, new Box(pos.add(-6.0, -6.0, -6.0), pos.add(6.0, 6.0, 6.0)), e -> true);
 	}
 

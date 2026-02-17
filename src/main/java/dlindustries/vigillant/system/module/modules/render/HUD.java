@@ -12,7 +12,7 @@ import dlindustries.vigillant.system.utils.RenderUtils;
 import dlindustries.vigillant.system.utils.TextRenderer;
 import dlindustries.vigillant.system.utils.Utils;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.util.Identifier;
 
 import java.awt.*;
@@ -136,7 +136,7 @@ public final class HUD extends Module implements HudListener {
 
 
 					context.drawTexture(
-							RenderLayer::getGuiTextured,
+							RenderPipelines.GUI_TEXTURED,
 							hudIconId,
 							iconX,
 							iconY,

@@ -70,7 +70,6 @@ public final class ModuleManager implements ButtonListener {
 		add(new NoBounce());
 
 		add(new TargetHud());
-		add(new NameTags());
 		add(new RenderBarrier());
 		add(new SuperVision());
 		add(new StorageEsp());

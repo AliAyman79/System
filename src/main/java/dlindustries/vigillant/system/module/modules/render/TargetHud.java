@@ -10,11 +10,9 @@ import dlindustries.vigillant.system.utils.*;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.PlayerSkinDrawer;
 import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.packet.c2s.play.PlayerInteractEntityC2SPacket;
 import net.minecraft.util.Hand;
-import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
 
 import java.awt.*;
@@ -70,17 +68,12 @@ public final class TargetHud extends Module implements HudListener, PacketSendLi
 			animation = RenderUtils.fast(animation, player.isAlive() ? 0 : 1, 15f);
 
 			PlayerListEntry entry = mc.getNetworkHandler().getPlayerListEntry(player.getUuid());
-			float tx = (float) x;
-			float ty = (float) y;
-			MatrixStack matrixStack = context.getMatrices();
-			float thetaRotation = 90 * animation;
-			matrixStack.push();
-			matrixStack.translate(tx, ty, 0);
-			matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(thetaRotation));
-			matrixStack.translate(-tx, -ty, 0);
 			Color themeColor = Utils.getMainColor(255, 0);
 			Color glowColor = new Color(themeColor.getRed(), themeColor.getGreen(), themeColor.getBlue(), 100);
-			RenderUtils.renderRoundedQuad(matrixStack, PANEL_COLOR, x, y, x + PANEL_WIDTH, y + PANEL_HEIGHT, BORDER_RADIUS, BORDER_RADIUS, BORDER_RADIUS, BORDER_RADIUS, 10);
+
+			// Ensure a guaranteed visible background even if rounded-quad pipeline fails on some render paths.
+			context.fill(x, y, x + PANEL_WIDTH, y + PANEL_HEIGHT, PANEL_COLOR.getRGB());
+			RenderUtils.renderRoundedQuad(context.getMatrices(), PANEL_COLOR, x, y, x + PANEL_WIDTH, y + PANEL_HEIGHT, BORDER_RADIUS, BORDER_RADIUS, BORDER_RADIUS, BORDER_RADIUS, 10);
 
 			for (int i = 0; i < 3; i++) {
 				RenderUtils.renderRoundedOutline(context, glowColor,
@@ -91,7 +84,7 @@ public final class TargetHud extends Module implements HudListener, PacketSendLi
 			RenderUtils.renderRoundedOutline(context, themeColor,
 					x, y, x + PANEL_WIDTH, y + PANEL_HEIGHT,
 					BORDER_RADIUS, BORDER_RADIUS, BORDER_RADIUS, BORDER_RADIUS, 1, 10);
-			RenderUtils.renderRoundedQuad(matrixStack, themeColor,
+			RenderUtils.renderRoundedQuad(context.getMatrices(), themeColor,
 					x, y + 27, x + PANEL_WIDTH, y + 29,
 					0, 0, 0, 0, 10);
 			dlindustries.vigillant.system.module.modules.client.NameProtect nameProtect =
@@ -141,8 +134,6 @@ public final class TargetHud extends Module implements HudListener, PacketSendLi
 						x + 124, y + 54, x + 125 + (player.hurtTime * 15) + 1, y + 59,
 						0, 0, 0, 0, 1, 10);
 			}
-
-			matrixStack.pop();
 		} else {
 			animation = RenderUtils.fast(animation, 1, 15f);
 		}

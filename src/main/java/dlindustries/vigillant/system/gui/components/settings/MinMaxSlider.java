@@ -8,7 +8,6 @@ import dlindustries.vigillant.system.utils.MathUtils;
 import dlindustries.vigillant.system.utils.TextRenderer;
 import dlindustries.vigillant.system.utils.Utils;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.MathHelper;
 import org.lwjgl.glfw.GLFW;
 
@@ -38,7 +37,7 @@ public final class MinMaxSlider extends RenderableSetting {
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         super.render(context, mouseX, mouseY, delta);
-        MatrixStack matrices = context.getMatrices();
+        var matrices = context.getMatrices();
 
         offsetMinX = (setting.getMinValue() - setting.getMin()) / (setting.getMax() - setting.getMin()) * parentWidth();
         offsetMaxX = (setting.getMaxValue() - setting.getMin()) / (setting.getMax() - setting.getMin()) * parentWidth();
@@ -51,11 +50,10 @@ public final class MinMaxSlider extends RenderableSetting {
         context.fillGradient((int) (parentX() + lerpedOffsetMinX), parentY() + offset + parentOffset() + 25, (int) (parentX() + lerpedOffsetMinX + getLength()), parentY() + offset + parentOffset() + parentHeight(), currentColor1.getRGB(), currentColor2.getRGB());
 
         float scalable = 0.8F;
-        matrices.push();
-        matrices.scale(scalable, scalable, 1);
+        matrices.pushMatrix();
+        matrices.scale(scalable, scalable);
         TextRenderer.drawString(str, context, (int) ((parentX() + 5) / scalable), (int) (((parentY() + parentOffset() + offset) + 9) / scalable), new Color(245, 245, 245, 255).getRGB());
-        matrices.scale(1, 1, 1);
-        matrices.pop();
+        matrices.popMatrix();
 
         if (!parent.parent.dragging) {
             int toHoverAlpha = isHovered(mouseX, mouseY) ? 15 : 0;

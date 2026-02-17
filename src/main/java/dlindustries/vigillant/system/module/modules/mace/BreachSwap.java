@@ -9,7 +9,7 @@ import dlindustries.vigillant.system.module.setting.NumberSetting;
 import dlindustries.vigillant.system.utils.EncryptedString;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.SwordItem;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 
@@ -48,7 +48,7 @@ public final class BreachSwap extends Module implements AttackListener, TickList
         eventManager.remove(AttackListener.class, this);
         eventManager.remove(TickListener.class, this);
         if (shouldSwitchBack && originalSlot != -1) {
-            mc.player.getInventory().selectedSlot = originalSlot;
+            mc.player.getInventory().setSelectedSlot(originalSlot);
         }
         super.onDisable();
     }
@@ -61,7 +61,7 @@ public final class BreachSwap extends Module implements AttackListener, TickList
         if (target == null) return;
 
         ItemStack currentStack = mc.player.getMainHandStack();
-        if (!(currentStack.getItem() instanceof SwordItem)) return;
+        if (!currentStack.isIn(ItemTags.SWORDS)) return;
 
         if (shouldSwitchBack) {
             switchTimer = 0;
@@ -71,10 +71,10 @@ public final class BreachSwap extends Module implements AttackListener, TickList
 
 
         if (switchBack.getValue() && originalSlot == -1) {
-            originalSlot = mc.player.getInventory().selectedSlot;
+            originalSlot = mc.player.getInventory().getSelectedSlot();
         }
 
-        mc.player.getInventory().selectedSlot = slotIndex;
+        mc.player.getInventory().setSelectedSlot(slotIndex);
 
         if (switchBack.getValue()) {
             shouldSwitchBack = true;
@@ -91,7 +91,7 @@ public final class BreachSwap extends Module implements AttackListener, TickList
             return;
         }
 
-        mc.player.getInventory().selectedSlot = originalSlot;
+        mc.player.getInventory().setSelectedSlot(originalSlot);
         resetState();
     }
 

@@ -113,7 +113,7 @@ public class DiveBomber extends Module implements TickListener, AttackListener {
 
         switch (equipState) {
             case SWITCHING_TO_CHESTPLATE:
-                player.getInventory().selectedSlot = chestplateSlot.getValueInt() - 1;
+                player.getInventory().setSelectedSlot(chestplateSlot.getValueInt() - 1);
                 equipState = EquipState.EQUIPPING;
                 break;
 
@@ -123,7 +123,7 @@ public class DiveBomber extends Module implements TickListener, AttackListener {
                 break;
 
             case SWITCHING_BACK:
-                player.getInventory().selectedSlot = maceSlot.getValueInt() - 1;
+                player.getInventory().setSelectedSlot(maceSlot.getValueInt() - 1);
                 resetState();
                 break;
         }

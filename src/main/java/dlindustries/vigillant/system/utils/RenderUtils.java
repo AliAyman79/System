@@ -1,19 +1,22 @@
 package dlindustries.vigillant.system.utils;
 
+import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import dlindustries.vigillant.system.module.modules.client.ClickGUI;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.ShaderProgramKey;
-import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.render.*;
+import net.minecraft.client.render.BuiltBuffer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
+import org.joml.Matrix3x2f;
+import org.joml.Matrix3x2fStack;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
@@ -27,7 +30,9 @@ public final class RenderUtils {
 	public static boolean rendering3D = true;
 
 	public static Vec3d getCameraPos() {
-		return mc.getBlockEntityRenderDispatcher().camera.getPos();
+		return mc.gameRenderer.getCamera().getFocusedEntity() != null
+				? new Vec3d(mc.gameRenderer.getCamera().getFocusedEntity().getX(), mc.gameRenderer.getCamera().getFocusedEntity().getY(), mc.gameRenderer.getCamera().getFocusedEntity().getZ())
+				: Vec3d.ZERO;
 	}
 
 	public static double deltaTime() {
@@ -49,12 +54,12 @@ public final class RenderUtils {
 	}
 
 	public static void unscaledProjection() {
-		RenderSystem.setProjectionMatrix(new Matrix4f().setOrtho(0, mc.getWindow().getFramebufferWidth(), mc.getWindow().getFramebufferHeight(), 0, 1000, 21000), com.mojang.blaze3d.systems.ProjectionType.ORTHOGRAPHIC);
+		// projection handled by client pipeline
 		rendering3D = false;
 	}
 
 	public static void scaledProjection() {
-		RenderSystem.setProjectionMatrix(new Matrix4f().setOrtho(0, (float) (mc.getWindow().getFramebufferWidth() / mc.getWindow().getScaleFactor()), (float) (mc.getWindow().getFramebufferHeight() / mc.getWindow().getScaleFactor()), 0, 1000, 21000), com.mojang.blaze3d.systems.ProjectionType.ORTHOGRAPHIC);
+		// projection handled by client pipeline
 		rendering3D = true;
 	}
 
@@ -65,27 +70,32 @@ public final class RenderUtils {
 		float g = (float) (color >> 16 & 255) / 255.0F;
 		float h = (float) (color >> 8 & 255) / 255.0F;
 		float k = (float) (color & 255) / 255.0F;
-		RenderSystem.enableBlend();
-		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-		RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
-
+		GlStateManager._enableBlend();
+		
 		renderRoundedQuadInternal(matrix, g, h, k, f, x, y, x2, y2, corner1, corner2, corner3, corner4, samples);
-		RenderSystem.enableCull();
-		RenderSystem.disableBlend();
+		GlStateManager._enableCull();
+		GlStateManager._disableBlend();
 	}
 
 	private static void setup() {
-		RenderSystem.enableBlend();
-		RenderSystem.defaultBlendFunc();
-	}
+		GlStateManager._enableBlend();
+			}
 
 	private static void cleanup() {
-		RenderSystem.enableCull();
-		RenderSystem.disableBlend();
+		GlStateManager._enableCull();
+		GlStateManager._disableBlend();
 	}
 
 	public static void renderRoundedQuad(MatrixStack matrices, Color c, double x, double y, double x1, double y1, double rad, double samples) {
 		renderRoundedQuad(matrices, c, x, y, x1, y1, rad, rad, rad, rad, samples);
+	}
+
+	public static void renderRoundedQuad(Matrix3x2fStack matrices, Color c, double x, double y, double x2, double y2, double corner1, double corner2, double corner3, double corner4, double samples) {
+		renderRoundedQuad(toMatrixStack(matrices), c, x, y, x2, y2, corner1, corner2, corner3, corner4, samples);
+	}
+
+	public static void renderRoundedQuad(Matrix3x2fStack matrices, Color c, double x, double y, double x1, double y1, double rad, double samples) {
+		renderRoundedQuad(toMatrixStack(matrices), c, x, y, x1, y1, rad, samples);
 	}
 
 	public static void renderRoundedOutlineInternal(Matrix4f matrix, float cr, float cg, float cb, float ca, double fromX, double fromY, double toX, double toY, double radC1, double radC2, double radC3, double radC4, double width, double samples) {
@@ -119,7 +129,7 @@ public final class RenderUtils {
 		float cos = (float) (rad);
 		bufferBuilder.vertex(matrix, (float) current[0], (float) current[1] + cos, 0.0F).color(cr, cg, cb, ca);
 		bufferBuilder.vertex(matrix, (float) (current[0]), (float) (current[1] + cos + width), 0.0F).color(cr, cg, cb, ca);
-		BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
+		bufferBuilder.end();
 	}
 	public static void renderFilledBox(MatrixStack matrices, Box box, Color color) {
 		renderFilledBox(matrices,
@@ -130,53 +140,51 @@ public final class RenderUtils {
 
 	public static void renderFilledBox(MatrixStack matrices, float minX, float minY, float minZ,
 									   float maxX, float maxY, float maxZ, Color color) {
-		RenderSystem.disableDepthTest();
-		RenderSystem.enableBlend();
-		RenderSystem.defaultBlendFunc();
+		GlStateManager._disableDepthTest();
+		GlStateManager._depthFunc(GL11.GL_ALWAYS);
+		GlStateManager._enableBlend();
 
 		float r = color.getRed() / 255f;
 		float g = color.getGreen() / 255f;
 		float b = color.getBlue() / 255f;
 		float a = color.getAlpha() / 255f;
 
-		RenderSystem.setShaderColor(r, g, b, a);
-		RenderSystem.setShader(ShaderProgramKeys.POSITION);
-
 		Tessellator tessellator = Tessellator.getInstance();
-		BufferBuilder buffer = tessellator.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION);
+		BufferBuilder buffer = tessellator.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
 
 		MatrixStack.Entry entry = matrices.peek();
 		Matrix4f matrix = entry.getPositionMatrix();
-		buffer.vertex(matrix, minX, minY, minZ);
-		buffer.vertex(matrix, minX, minY, maxZ);
-		buffer.vertex(matrix, maxX, minY, maxZ);
-		buffer.vertex(matrix, maxX, minY, minZ);
-		buffer.vertex(matrix, minX, maxY, minZ);
-		buffer.vertex(matrix, maxX, maxY, minZ);
-		buffer.vertex(matrix, maxX, maxY, maxZ);
-		buffer.vertex(matrix, minX, maxY, maxZ);
-		buffer.vertex(matrix, minX, minY, minZ);
-		buffer.vertex(matrix, maxX, minY, minZ);
-		buffer.vertex(matrix, maxX, maxY, minZ);
-		buffer.vertex(matrix, minX, maxY, minZ);
-		buffer.vertex(matrix, minX, minY, maxZ);
-		buffer.vertex(matrix, minX, maxY, maxZ);
-		buffer.vertex(matrix, maxX, maxY, maxZ);
-		buffer.vertex(matrix, maxX, minY, maxZ);
-		buffer.vertex(matrix, minX, minY, minZ);
-		buffer.vertex(matrix, minX, maxY, minZ);
-		buffer.vertex(matrix, minX, maxY, maxZ);
-		buffer.vertex(matrix, minX, minY, maxZ);
-		buffer.vertex(matrix, maxX, minY, minZ);
-		buffer.vertex(matrix, maxX, minY, maxZ);
-		buffer.vertex(matrix, maxX, maxY, maxZ);
-		buffer.vertex(matrix, maxX, maxY, minZ);
+		buffer.vertex(matrix, minX, minY, minZ).color(r, g, b, a);
+		buffer.vertex(matrix, minX, minY, maxZ).color(r, g, b, a);
+		buffer.vertex(matrix, maxX, minY, maxZ).color(r, g, b, a);
+		buffer.vertex(matrix, maxX, minY, minZ).color(r, g, b, a);
+		buffer.vertex(matrix, minX, maxY, minZ).color(r, g, b, a);
+		buffer.vertex(matrix, maxX, maxY, minZ).color(r, g, b, a);
+		buffer.vertex(matrix, maxX, maxY, maxZ).color(r, g, b, a);
+		buffer.vertex(matrix, minX, maxY, maxZ).color(r, g, b, a);
+		buffer.vertex(matrix, minX, minY, minZ).color(r, g, b, a);
+		buffer.vertex(matrix, maxX, minY, minZ).color(r, g, b, a);
+		buffer.vertex(matrix, maxX, maxY, minZ).color(r, g, b, a);
+		buffer.vertex(matrix, minX, maxY, minZ).color(r, g, b, a);
+		buffer.vertex(matrix, minX, minY, maxZ).color(r, g, b, a);
+		buffer.vertex(matrix, minX, maxY, maxZ).color(r, g, b, a);
+		buffer.vertex(matrix, maxX, maxY, maxZ).color(r, g, b, a);
+		buffer.vertex(matrix, maxX, minY, maxZ).color(r, g, b, a);
+		buffer.vertex(matrix, minX, minY, minZ).color(r, g, b, a);
+		buffer.vertex(matrix, minX, maxY, minZ).color(r, g, b, a);
+		buffer.vertex(matrix, minX, maxY, maxZ).color(r, g, b, a);
+		buffer.vertex(matrix, minX, minY, maxZ).color(r, g, b, a);
+		buffer.vertex(matrix, maxX, minY, minZ).color(r, g, b, a);
+		buffer.vertex(matrix, maxX, minY, maxZ).color(r, g, b, a);
+		buffer.vertex(matrix, maxX, maxY, maxZ).color(r, g, b, a);
+		buffer.vertex(matrix, maxX, maxY, minZ).color(r, g, b, a);
 
-		BufferRenderer.drawWithGlobalProgram(buffer.end());
+		BuiltBuffer built = buffer.end();
+		RenderLayers.debugFilledBox().draw(built);
 
-		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-		RenderSystem.enableDepthTest();
-		RenderSystem.disableBlend();
+		GlStateManager._depthFunc(GL11.GL_LEQUAL);
+		GlStateManager._enableDepthTest();
+		GlStateManager._disableBlend();
 	}
 
 	public static void renderOutlinedBox(MatrixStack matrices, Box box, Color color) {
@@ -188,91 +196,87 @@ public final class RenderUtils {
 
 	public static void renderOutlinedBox(MatrixStack matrices, float minX, float minY, float minZ,
 										 float maxX, float maxY, float maxZ, Color color) {
-		RenderSystem.disableDepthTest();
-		RenderSystem.enableBlend();
-		RenderSystem.defaultBlendFunc();
+		GlStateManager._disableDepthTest();
+		GlStateManager._depthFunc(GL11.GL_ALWAYS);
+		GlStateManager._enableBlend();
 
 		float r = color.getRed() / 255f;
 		float g = color.getGreen() / 255f;
 		float b = color.getBlue() / 255f;
 		float a = color.getAlpha() / 255f;
 
-		RenderSystem.setShaderColor(r, g, b, a);
-		RenderSystem.setShader(ShaderProgramKeys.POSITION);
-
 		Tessellator tessellator = Tessellator.getInstance();
-		BufferBuilder buffer = tessellator.begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION);
+		BufferBuilder buffer = tessellator.begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR_NORMAL);
 
 		MatrixStack.Entry entry = matrices.peek();
 		Matrix4f matrix = entry.getPositionMatrix();
-		buffer.vertex(matrix, minX, minY, minZ);
-		buffer.vertex(matrix, maxX, minY, minZ);
+		buffer.vertex(matrix, minX, minY, minZ).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, maxX, minY, minZ).color(r, g, b, a).normal(0, 1, 0);
 
-		buffer.vertex(matrix, maxX, minY, minZ);
-		buffer.vertex(matrix, maxX, minY, maxZ);
+		buffer.vertex(matrix, maxX, minY, minZ).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, maxX, minY, maxZ).color(r, g, b, a).normal(0, 1, 0);
 
-		buffer.vertex(matrix, maxX, minY, maxZ);
-		buffer.vertex(matrix, minX, minY, maxZ);
+		buffer.vertex(matrix, maxX, minY, maxZ).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, minX, minY, maxZ).color(r, g, b, a).normal(0, 1, 0);
 
-		buffer.vertex(matrix, minX, minY, maxZ);
-		buffer.vertex(matrix, minX, minY, minZ);
-		buffer.vertex(matrix, minX, maxY, minZ);
-		buffer.vertex(matrix, maxX, maxY, minZ);
+		buffer.vertex(matrix, minX, minY, maxZ).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, minX, minY, minZ).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, minX, maxY, minZ).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, maxX, maxY, minZ).color(r, g, b, a).normal(0, 1, 0);
 
-		buffer.vertex(matrix, maxX, maxY, minZ);
-		buffer.vertex(matrix, maxX, maxY, maxZ);
+		buffer.vertex(matrix, maxX, maxY, minZ).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, maxX, maxY, maxZ).color(r, g, b, a).normal(0, 1, 0);
 
-		buffer.vertex(matrix, maxX, maxY, maxZ);
-		buffer.vertex(matrix, minX, maxY, maxZ);
+		buffer.vertex(matrix, maxX, maxY, maxZ).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, minX, maxY, maxZ).color(r, g, b, a).normal(0, 1, 0);
 
-		buffer.vertex(matrix, minX, maxY, maxZ);
-		buffer.vertex(matrix, minX, maxY, minZ);
-		buffer.vertex(matrix, minX, minY, minZ);
-		buffer.vertex(matrix, minX, maxY, minZ);
+		buffer.vertex(matrix, minX, maxY, maxZ).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, minX, maxY, minZ).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, minX, minY, minZ).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, minX, maxY, minZ).color(r, g, b, a).normal(0, 1, 0);
 
-		buffer.vertex(matrix, maxX, minY, minZ);
-		buffer.vertex(matrix, maxX, maxY, minZ);
+		buffer.vertex(matrix, maxX, minY, minZ).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, maxX, maxY, minZ).color(r, g, b, a).normal(0, 1, 0);
 
-		buffer.vertex(matrix, maxX, minY, maxZ);
-		buffer.vertex(matrix, maxX, maxY, maxZ);
+		buffer.vertex(matrix, maxX, minY, maxZ).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, maxX, maxY, maxZ).color(r, g, b, a).normal(0, 1, 0);
 
-		buffer.vertex(matrix, minX, minY, maxZ);
-		buffer.vertex(matrix, minX, maxY, maxZ);
+		buffer.vertex(matrix, minX, minY, maxZ).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, minX, maxY, maxZ).color(r, g, b, a).normal(0, 1, 0);
 
-		BufferRenderer.drawWithGlobalProgram(buffer.end());
+		BuiltBuffer built = buffer.end();
+		RenderLayers.lines().draw(built);
 
-		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-		RenderSystem.enableDepthTest();
-		RenderSystem.disableBlend();
+		GlStateManager._depthFunc(GL11.GL_LEQUAL);
+		GlStateManager._enableDepthTest();
+		GlStateManager._disableBlend();
 	}
 
 	public static void renderLine(MatrixStack matrices, Vec3d start, Vec3d end, Color color) {
-		RenderSystem.disableDepthTest();
-		RenderSystem.enableBlend();
-		RenderSystem.defaultBlendFunc();
+		GlStateManager._disableDepthTest();
+		GlStateManager._depthFunc(GL11.GL_ALWAYS);
+		GlStateManager._enableBlend();
 
 		float r = color.getRed() / 255f;
 		float g = color.getGreen() / 255f;
 		float b = color.getBlue() / 255f;
 		float a = color.getAlpha() / 255f;
 
-		RenderSystem.setShaderColor(r, g, b, a);
-		RenderSystem.setShader(ShaderProgramKeys.POSITION);
-
 		Tessellator tessellator = Tessellator.getInstance();
-		BufferBuilder buffer = tessellator.begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION);
+		BufferBuilder buffer = tessellator.begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR_NORMAL);
 
 		MatrixStack.Entry entry = matrices.peek();
 		Matrix4f matrix = entry.getPositionMatrix();
 
-		buffer.vertex(matrix, (float) start.x, (float) start.y, (float) start.z);
-		buffer.vertex(matrix, (float) end.x, (float) end.y, (float) end.z);
+		buffer.vertex(matrix, (float) start.x, (float) start.y, (float) start.z).color(r, g, b, a).normal(0, 1, 0);
+		buffer.vertex(matrix, (float) end.x, (float) end.y, (float) end.z).color(r, g, b, a).normal(0, 1, 0);
 
-		BufferRenderer.drawWithGlobalProgram(buffer.end());
+		BuiltBuffer built = buffer.end();
+		RenderLayers.lines().draw(built);
 
-		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-		RenderSystem.enableDepthTest();
-		RenderSystem.disableBlend();
+		GlStateManager._depthFunc(GL11.GL_LEQUAL);
+		GlStateManager._enableDepthTest();
+		GlStateManager._disableBlend();
 	}
 
 	public static void renderCircle(MatrixStack matrices, Color c, double originX, double originY, double rad, int segments) {
@@ -285,7 +289,6 @@ public final class RenderUtils {
 		float h = (float) (color >> 8 & 255) / 255.0F;
 		float k = (float) (color & 255) / 255.0F;
 		setup();
-		RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
 		BufferBuilder bufferBuilder = Tessellator.getInstance().begin(VertexFormat.DrawMode.TRIANGLE_FAN, VertexFormats.POSITION_COLOR);
 		for (int i = 0; i < 360; i += Math.min(360 / segments1, 360 - i)) {
 			double radians = Math.toRadians(i);
@@ -293,19 +296,35 @@ public final class RenderUtils {
 			double cos = Math.cos(radians) * rad;
 			bufferBuilder.vertex(matrix, (float) (originX + sin), (float) (originY + cos), 0).color(g, h, k, f);
 		}
-		BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
+		bufferBuilder.end();
 		cleanup();
+	}
+
+	public static void renderCircle(Matrix3x2fStack matrices, Color c, double originX, double originY, double rad, int segments) {
+		renderCircle(toMatrixStack(matrices), c, originX, originY, rad, segments);
+	}
+
+	private static MatrixStack toMatrixStack(Matrix3x2fStack matrices) {
+		Matrix3x2f m = new Matrix3x2f(matrices);
+		MatrixStack stack = new MatrixStack();
+		Matrix4f matrix = stack.peek().getPositionMatrix();
+		matrix.set(
+				m.m00(), m.m10(), 0.0f, 0.0f,
+				m.m01(), m.m11(), 0.0f, 0.0f,
+				0.0f, 0.0f, 1.0f, 0.0f,
+				m.m20(), m.m21(), 0.0f, 1.0f
+		);
+		return stack;
 	}
 
 	public static void renderRoundedOutline(DrawContext poses, Color c, double fromX, double fromY, double toX, double toY, double rad1, double rad2, double rad3, double rad4, double width, double samples) {
 		int color = c.getRGB();
-		Matrix4f matrix = poses.getMatrices().peek().getPositionMatrix();
+		Matrix4f matrix = toMatrixStack(poses.getMatrices()).peek().getPositionMatrix();
 		float f = (float) (color >> 24 & 255) / 255.0F;
 		float g = (float) (color >> 16 & 255) / 255.0F;
 		float h = (float) (color >> 8 & 255) / 255.0F;
 		float k = (float) (color & 255) / 255.0F;
 		setup();
-		RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
 
 		renderRoundedOutlineInternal(matrix, g, h, k, f, fromX, fromY, toX, toY, rad1, rad2, rad3, rad4, width, samples);
 		cleanup();
@@ -330,7 +349,7 @@ public final class RenderUtils {
 			float cos = (float) (Math.cos(rad1) * rad);
 			bufferBuilder.vertex(matrix, (float) current[0] + sin, (float) current[1] + cos, 0.0F).color(cr, cg, cb, ca);
 		}
-		BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
+		bufferBuilder.end();
 	}
 
 	interface RenderAction {
@@ -346,14 +365,12 @@ public final class RenderUtils {
 			GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
 		}
 		GL11.glDepthFunc(GL11.GL_ALWAYS);
-		RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-		RenderSystem.defaultBlendFunc();
-		RenderSystem.enableBlend();
+						GlStateManager._enableBlend();
 
 		genericAABBRender(
 				VertexFormat.DrawMode.DEBUG_LINES,
 				VertexFormats.POSITION_COLOR,
-				ShaderProgramKeys.POSITION_COLOR,
+				null,
 				s,
 				start,
 				end.subtract(start),
@@ -365,7 +382,7 @@ public final class RenderUtils {
 		);
 
 		GL11.glDepthFunc(GL11.GL_LEQUAL);
-		RenderSystem.disableBlend();
+		GlStateManager._disableBlend();
 		if (ClickGUI.antiAliasing.getValue()) {
 			GL11.glDisable(GL11.GL_LINE_SMOOTH);
 			GL11.glDisable(GL13.GL_MULTISAMPLE);
@@ -373,7 +390,7 @@ public final class RenderUtils {
 		matrices.pop();
 	}
 
-	private static void genericAABBRender(VertexFormat.DrawMode mode, VertexFormat format, ShaderProgramKey shader, Matrix4f stack, Vec3d start, Vec3d dimensions, Color color, RenderAction action) {
+	private static void genericAABBRender(VertexFormat.DrawMode mode, VertexFormat format, Object shader, Matrix4f stack, Vec3d start, Vec3d dimensions, Color color, RenderAction action) {
 		float red = color.getRed() / 255f;
 		float green = color.getGreen() / 255f;
 		float blue = color.getBlue() / 255f;
@@ -388,15 +405,19 @@ public final class RenderUtils {
 		useBuffer(mode, format, shader, bufferBuilder -> action.run(bufferBuilder, x1, y1, z1, x2, y2, z2, red, green, blue, alpha, stack));
 	}
 
-	private static void useBuffer(VertexFormat.DrawMode mode, VertexFormat format, ShaderProgramKey shader, Consumer<BufferBuilder> runner) {
+	private static void useBuffer(VertexFormat.DrawMode mode, VertexFormat format, Object shader, Consumer<BufferBuilder> runner) {
 		Tessellator t = Tessellator.getInstance();
 		BufferBuilder bb = t.begin(mode, format);
 
 		runner.accept(bb);
 
 		setup();
-		RenderSystem.setShader(shader);
-		BufferRenderer.drawWithGlobalProgram(bb.end());
+		BuiltBuffer built = bb.end();
+		if (mode == VertexFormat.DrawMode.DEBUG_LINES || mode == VertexFormat.DrawMode.LINES) {
+			RenderLayers.lines().draw(built);
+		} else {
+			RenderLayers.debugFilledBox().draw(built);
+		}
 		cleanup();
 	}
 }

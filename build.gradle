@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.9.2'
+    id 'fabric-loom' version '1.15.3'
     id 'maven-publish'
 }
 
@@ -59,7 +59,7 @@ java {
 
 jar {
     from("LICENSE") {
-        rename { "${it}_${project.archivesBaseName}" }
+        rename { "${it}_${project.base.archivesName.get()}" }
     }
     from {
         configurations.shadow.collect { it.isDirectory() ? it : zipTree(it) }

@@ -14,8 +14,7 @@ public class FakeInvScreen extends InventoryScreen {
 	protected void onMouseClick(Slot slot, int slotId, int button, SlotActionType actionType) {
 	}
 
-	@Override
-	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+	public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) {
 		return false;
 	}
 }

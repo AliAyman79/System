@@ -7,10 +7,11 @@ import dlindustries.vigillant.system.utils.ColorUtils;
 import dlindustries.vigillant.system.utils.RenderUtils;
 import dlindustries.vigillant.system.utils.TextRenderer;
 import dlindustries.vigillant.system.utils.Utils;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.gl.RenderPipelines;
+import net.minecraft.client.gui.Click;
+import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -84,10 +85,10 @@ public final class ClickGui extends Screen {
 
 		int fgColor = Utils.getMainColor(255, 0).getRGB();
 
-		context.getMatrices().push();
+		context.getMatrices().pushMatrix();
 
-		context.getMatrices().translate(xPlayer, yPlayer, 0);
-		context.getMatrices().scale(scale, scale, 1);
+		context.getMatrices().translate(xPlayer, yPlayer);
+		context.getMatrices().scale(scale, scale);
 		RenderUtils.renderRoundedQuad(
 				context.getMatrices(),
 				new Color(20, 20, 20, 150),
@@ -107,11 +108,11 @@ public final class ClickGui extends Screen {
 				fgColor
 		);
 
-		context.getMatrices().pop();
-		context.getMatrices().push();
+		context.getMatrices().popMatrix();
+		context.getMatrices().pushMatrix();
 
-		context.getMatrices().translate(xSystem, ySystem, 0);
-		context.getMatrices().scale(scale, scale, 1);
+		context.getMatrices().translate(xSystem, ySystem);
+		context.getMatrices().scale(scale, scale);
 		RenderUtils.renderRoundedQuad(
 				context.getMatrices(),
 				new Color(20, 20, 20, 150),
@@ -131,7 +132,7 @@ public final class ClickGui extends Screen {
 				fgColor
 		);
 
-		context.getMatrices().pop();
+		context.getMatrices().popMatrix();
 		RenderUtils.unscaledProjection();
 	}
 
@@ -162,7 +163,7 @@ public final class ClickGui extends Screen {
 				int imageY = screenHeight - imageHeight;
 
 				context.drawTexture(
-						RenderLayer::getGuiTextured,
+						RenderPipelines.GUI_TEXTURED,
 						BACKGROUND_IMAGE,
 						imageX, imageY,
 						0.0f, 0.0f,
@@ -173,13 +174,11 @@ public final class ClickGui extends Screen {
 			}
 
 			RenderUtils.unscaledProjection();
-			mouseX *= (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
-			mouseY *= (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
 			super.render(context, mouseX, mouseY, delta);
 
 			for (Window window : windows) {
-				window.render(context, mouseX, mouseY, delta);
 				window.updatePosition(mouseX, mouseY, delta);
+				window.render(context, mouseX, mouseY, delta);
 			}
 
 			renderPlayerName(context);
@@ -189,35 +188,43 @@ public final class ClickGui extends Screen {
 	}
 
 	@Override
-	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+	public boolean keyPressed(KeyInput keyInput) {
+		int keyCode = keyInput.key();
+		int scanCode = keyInput.scancode();
+		int modifiers = keyInput.modifiers();
 		for (Window window : windows)
 			window.keyPressed(keyCode, scanCode, modifiers);
-		return super.keyPressed(keyCode, scanCode, modifiers);
+		return super.keyPressed(keyInput);
 	}
 
 	@Override
-	public boolean mouseClicked(double mouseX, double mouseY, int button) {
-		mouseX *= (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
-		mouseY *= (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
+	public boolean mouseClicked(Click click, boolean doubled) {
+		double mouseX = click.x();
+		double mouseY = click.y();
+		int button = click.button();
 		for (Window window : windows)
 			window.mouseClicked(mouseX, mouseY, button);
-		return super.mouseClicked(mouseX, mouseY, button);
+		return super.mouseClicked(click, doubled);
 	}
 
 	@Override
-	public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-		mouseX *= (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
-		mouseY *= (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
+	public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+		double mouseX = click.x();
+		double mouseY = click.y();
+		int button = click.button();
 		for (Window window : windows)
 			window.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
-		return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+		return super.mouseDragged(click, deltaX, deltaY);
 	}
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-		mouseY *= MinecraftClient.getInstance().getWindow().getScaleFactor();
-		for (Window window : windows)
-			window.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+		for (Window window : windows) {
+			if (window.isContentHovered(mouseX, mouseY)) {
+				window.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+				return true;
+			}
+		}
 		return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
 	}
 
@@ -228,7 +235,11 @@ public final class ClickGui extends Screen {
 
 	@Override
 	public void close() {
-		system.INSTANCE.getModuleManager().getModule(ClickGUI.class).setEnabledStatus(false);
+		ClickGUI clickGuiModule = system.INSTANCE.getModuleManager().getModule(ClickGUI.class);
+		if (clickGuiModule != null && clickGuiModule.isEnabled()) {
+			clickGuiModule.setEnabled(false);
+			return;
+		}
 		onGuiClose();
 	}
 
@@ -240,11 +251,12 @@ public final class ClickGui extends Screen {
 	}
 
 	@Override
-	public boolean mouseReleased(double mouseX, double mouseY, int button) {
-		mouseX *= (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
-		mouseY *= (int) MinecraftClient.getInstance().getWindow().getScaleFactor();
+	public boolean mouseReleased(Click click) {
+		double mouseX = click.x();
+		double mouseY = click.y();
+		int button = click.button();
 		for (Window window : windows)
 			window.mouseReleased(mouseX, mouseY, button);
-		return super.mouseReleased(mouseX, mouseY, button);
+		return super.mouseReleased(click);
 	}
 }

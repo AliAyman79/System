@@ -1,6 +1,5 @@
 package dlindustries.vigillant.system.gui.components;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import dlindustries.vigillant.system.system;
 import dlindustries.vigillant.system.gui.Window;
 import dlindustries.vigillant.system.gui.components.settings.*;
@@ -139,19 +138,15 @@ public final class ModuleButton {
 	}
 
 	private void renderSettings(DrawContext context, int mouseX, int mouseY, float delta) {
-		int scissorX = parent.getX();
-		int scissorY = (int) (mc.getWindow().getHeight() - (parent.getY() + offset + animation.getValue()));
-		int scissorWidth = parent.getWidth();
-		int scissorHeight = (int) animation.getValue();
-
-		RenderSystem.enableScissor(scissorX, scissorY, scissorWidth, scissorHeight);
+		// On collapse, hide settings immediately, then animate the panel sliding up.
+		boolean showSettings = extended;
 
 		for (RenderableSetting renderableSetting : settings)
-			if(animation.getValue() > parent.getHeight())
+			if(showSettings)
 				renderableSetting.render(context, mouseX, mouseY, delta);
 
 		for (RenderableSetting renderableSetting : settings) {
-			if(animation.getValue() > parent.getHeight()) {
+			if(showSettings) {
 				if (renderableSetting instanceof Slider slider) {
 					RenderUtils.renderCircle(context.getMatrices(), new Color(0, 0, 0, 170), (slider.parentX() + (Math.max(slider.lerpedOffsetX, 2.5))), slider.parentY() + slider.offset + slider.parentOffset() + 27.5, 6, 15);
 					RenderUtils.renderCircle(context.getMatrices(), slider.currentColor1.brighter(), (slider.parentX() + (Math.max(slider.lerpedOffsetX, 2.5))) , slider.parentY() + slider.offset + slider.parentOffset() + 27.5, 5, 15);
@@ -165,8 +160,6 @@ public final class ModuleButton {
 				}
 			}
 		}
-
-		RenderSystem.disableScissor();
 	}
 
 	public void onExtend() {

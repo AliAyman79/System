@@ -6,6 +6,7 @@ import dlindustries.vigillant.system.event.events.MouseMoveListener;
 import dlindustries.vigillant.system.event.events.MouseUpdateListener;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
+import net.minecraft.client.input.MouseInput;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -32,7 +33,7 @@ public class MouseMixin {
 	}
 
 	@Inject(method = "onMouseButton", at = @At("HEAD"))
-	private void onMousePress(long window, int button, int action, int mods, CallbackInfo ci) {
-		EventManager.fire(new ButtonListener.ButtonEvent(button, window, action));
+	private void onMousePress(long window, MouseInput input, int action, CallbackInfo ci) {
+		EventManager.fire(new ButtonListener.ButtonEvent(input.button(), window, action));
 	}
 }

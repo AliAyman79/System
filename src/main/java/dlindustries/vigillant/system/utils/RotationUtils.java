@@ -16,7 +16,7 @@ public final class RotationUtils {
 	}
 
 	public static BlockPos getCameraBlockPos() {
-		return mc.getBlockEntityRenderDispatcher().camera.getBlockPos();
+		return mc.gameRenderer.getCamera().getBlockPos();
 	}
 
 	public static BlockPos getEyesBlockPos() {

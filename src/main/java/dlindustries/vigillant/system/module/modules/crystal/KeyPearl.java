@@ -65,7 +65,7 @@ public final class KeyPearl extends Module implements TickListener {
         if (!active) return;
 
         if (previousSlot == -1)
-            previousSlot = mc.player.getInventory().selectedSlot;
+            previousSlot = mc.player.getInventory().getSelectedSlot();
         applyBoost();
 
         InventoryUtils.selectItemFromHotbar(Items.ENDER_PEARL);

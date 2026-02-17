@@ -1,174 +1,93 @@
 package dlindustries.vigillant.system.module.modules.render;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import dlindustries.vigillant.system.event.events.GameRenderListener;
 import dlindustries.vigillant.system.module.Category;
 import dlindustries.vigillant.system.module.Module;
 import dlindustries.vigillant.system.module.modules.client.ClickGUI;
 import dlindustries.vigillant.system.module.setting.BooleanSetting;
-import dlindustries.vigillant.system.module.setting.ModeSetting;
 import dlindustries.vigillant.system.module.setting.NumberSetting;
 import dlindustries.vigillant.system.utils.EncryptedString;
-import dlindustries.vigillant.system.utils.RenderUtils;
-import dlindustries.vigillant.system.utils.Utils;
-import net.minecraft.client.gl.ShaderProgramKeys;
-import net.minecraft.client.render.*;
-import net.minecraft.client.util.math.MatrixStack;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.DrawStyle;
+import net.minecraft.client.render.GameRenderer;
+import net.minecraft.client.render.WorldRenderer;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
-import org.joml.Matrix4f;
-import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL13;
+import net.minecraft.world.debug.gizmo.GizmoDrawing;
 
 import java.awt.*;
 
-public final class SuperVision extends Module implements GameRenderListener {
-    public enum Mode {
-        TwoD, ThreeD
-    }
+public final class SuperVision extends Module {
+    private final NumberSetting range = new NumberSetting(EncryptedString.of("Range"), 8, 256, 80, 1)
+            .setDescription(EncryptedString.of("Maximum target distance"));
+    private final NumberSetting fillAlpha = new NumberSetting(EncryptedString.of("Fill Alpha"), 0, 255, 80, 1)
+            .setDescription(EncryptedString.of("Fill opacity"));
+    private final NumberSetting outlineAlpha = new NumberSetting(EncryptedString.of("Outline Alpha"), 0, 255, 220, 1)
+            .setDescription(EncryptedString.of("Outline opacity"));
+    private final BooleanSetting solid = new BooleanSetting(EncryptedString.of("Solid"), true)
+            .setDescription(EncryptedString.of("Draw filled boxes"));
 
-    public final ModeSetting<Mode> mode = new ModeSetting<>(EncryptedString.of("Mode"), Mode.ThreeD, Mode.class);
-    private final NumberSetting alpha = new NumberSetting(EncryptedString.of("Alpha"), 0, 255, 100, 1);
-    private final NumberSetting width = new NumberSetting(EncryptedString.of("Line width"), 1, 10, 1, 1);
-    private final BooleanSetting tracers = new BooleanSetting(EncryptedString.of("Tracers"), false)
-            .setDescription(EncryptedString.of("Draws a line from your player to the other"));
+    private boolean worldRenderHookRegistered;
 
     public SuperVision() {
         super(EncryptedString.of("Player ESP"),
                 EncryptedString.of("Renders players through walls"),
                 -1,
                 Category.RENDER);
-        addSettings(alpha, mode, width, tracers);
+        addSettings(range, fillAlpha, outlineAlpha, solid);
+        registerWorldRenderHook();
     }
 
-    @Override
-    public void onEnable() {
-        eventManager.add(GameRenderListener.class, this);
-        super.onEnable();
+    private void registerWorldRenderHook() {
+        if (worldRenderHookRegistered) return;
+        worldRenderHookRegistered = true;
+        WorldRenderEvents.BEFORE_DEBUG_RENDER.register(this::onWorldRender);
     }
 
-    @Override
-    public void onDisable() {
-        eventManager.remove(GameRenderListener.class, this);
-        super.onDisable();
-    }
+    private void onWorldRender(WorldRenderContext context) {
+        if (!isEnabled() || mc.world == null || mc.player == null) return;
+        WorldRenderer worldRenderer = context.worldRenderer();
+        GameRenderer gameRenderer = context.gameRenderer();
+        if (worldRenderer == null || gameRenderer == null) return;
+        Camera camera = gameRenderer.getCamera();
+        if (camera == null) return;
 
-    @Override
-    public void onGameRender(GameRenderEvent event) {
-        for (PlayerEntity player : mc.world.getPlayers()) {
-            if (mode.isMode(Mode.ThreeD)) {
-                if (player != mc.player) {
-                    Camera cam = mc.getBlockEntityRenderDispatcher().camera;
-                    if (cam != null) {
-                        MatrixStack matrices = event.matrices;
-                        matrices.push();
-                        Vec3d vec = cam.getPos();
+        float tickDelta = mc.getRenderTickCounter().getDynamicDeltaTicks();
+        double rangeSq = range.getValue() * range.getValue();
 
-                        event.matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(cam.getPitch()));
-                        event.matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(cam.getYaw() + 180F));
-                        event.matrices.translate(-vec.x, -vec.y, -vec.z);
-                    }
+        int fillColor = rgba(fillAlpha.getValueInt()).getRGB();
+        int outlineColor = rgba(outlineAlpha.getValueInt()).brighter().getRGB();
+        DrawStyle style = solid.getValue()
+                ? DrawStyle.filledAndStroked(outlineColor, 1.5f, fillColor)
+                : DrawStyle.stroked(outlineColor, 1.5f);
 
-                    double xPos = MathHelper.lerp(RenderTickCounter.ONE.getTickDelta(true), player.prevX, player.getX());
-                    double yPos = MathHelper.lerp(RenderTickCounter.ONE.getTickDelta(true), player.prevY, player.getY());
-                    double zPos = MathHelper.lerp(RenderTickCounter.ONE.getTickDelta(true), player.prevZ, player.getZ());
+        try (var ignored = worldRenderer.startDrawingGizmos()) {
+            for (PlayerEntity player : mc.world.getPlayers()) {
+                if (player == mc.player || !player.isAlive() || player.isSpectator()) continue;
+                if (mc.player.squaredDistanceTo(player) > rangeSq) continue;
 
-                    RenderUtils.renderFilledBox(
-                            event.matrices,
-                            (float) xPos - player.getWidth() / 2,
-                            (float) yPos,
-                            (float) zPos - player.getWidth() / 2,
-                            (float) xPos + player.getWidth() / 2,
-                            (float) yPos + player.getHeight(),
-                            (float) zPos + player.getWidth() / 2,
-                            Utils.getMainColor(alpha.getValueInt(), 1).brighter());
-
-                    if (tracers.getValue())
-                        RenderUtils.renderLine(event.matrices, Utils.getMainColor(255, 1), mc.crosshairTarget.getPos(), player.getLerpedPos(RenderTickCounter.ONE.getTickDelta(true)));
-
-                    event.matrices.pop();
-                }
-            } else if (mode.isMode(Mode.TwoD)) {
-                if (player != mc.player) {
-                    var cam = mc.getBlockEntityRenderDispatcher().camera;
-                    event.matrices.push();
-                    event.matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(cam.getPitch()));
-                    event.matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(cam.getYaw() + 180F));
-                    renderOutline(player, getColor(alpha.getValueInt()), event.matrices);
-
-                    if (tracers.getValue())
-                        RenderUtils.renderLine(event.matrices, Utils.getMainColor(255, 1), mc.crosshairTarget.getPos(), player.getLerpedPos(RenderTickCounter.ONE.getTickDelta(true)));
-
-                    event.matrices.pop();
-                }
+                Box worldBox = getInterpolatedBox(player, tickDelta);
+                GizmoDrawing.box(worldBox, style).ignoreOcclusion();
             }
         }
     }
 
-    private void renderOutline(PlayerEntity e, Color color, MatrixStack stack) {
-        float red = color.brighter().getRed() / 255f;
-        float green = color.brighter().getGreen() / 255f;
-        float blue = color.brighter().getBlue() / 255f;
-        float alpha = color.brighter().getAlpha() / 255f;
-
-        Camera c = mc.gameRenderer.getCamera();
-        Vec3d camPos = c.getPos();
-        Vec3d start = e.getLerpedPos(RenderTickCounter.ONE.getTickDelta(true)).subtract(camPos);
-        float x = (float) start.x;
-        float y = (float) start.y;
-        float z = (float) start.z;
-
-        double r = Math.toRadians(-c.getYaw() + 90);
-        float sin = (float) (Math.sin(r) * (e.getWidth() / 1.7));
-        float cos = (float) (Math.cos(r) * (e.getWidth() / 1.7));
-        stack.push();
-
-        Matrix4f matrix = stack.peek().getPositionMatrix();
-
-        RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
-        if (ClickGUI.antiAliasing.getValue()) {
-            GL11.glEnable(GL13.GL_MULTISAMPLE);
-            GL11.glEnable(GL11.GL_LINE_SMOOTH);
-            GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
-        }
-        GL11.glDepthFunc(GL11.GL_ALWAYS);
-        RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.enableBlend();
-
-        GL11.glLineWidth(width.getValueInt());
-        BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.DEBUG_LINES,
-                VertexFormats.POSITION_COLOR);
-
-        buffer.vertex(matrix, x + sin, y, z + cos).color(red, green, blue, alpha);
-        buffer.vertex(matrix, x - sin, y, z - cos).color(red, green, blue, alpha);
-        buffer.vertex(matrix, x - sin, y, z - cos).color(red, green, blue, alpha);
-        buffer.vertex(matrix, x - sin, y + e.getHeight(), z - cos).color(red, green, blue, alpha);
-        buffer.vertex(matrix, x - sin, y + e.getHeight(), z - cos).color(red, green, blue, alpha);
-        buffer.vertex(matrix, x + sin, y + e.getHeight(), z + cos).color(red, green, blue, alpha);
-        buffer.vertex(matrix, x + sin, y + e.getHeight(), z + cos).color(red, green, blue, alpha);
-        buffer.vertex(matrix, x + sin, y, z + cos).color(red, green, blue, alpha);
-        buffer.vertex(matrix, x + sin, y, z + cos).color(red, green, blue, alpha);
-
-        BufferRenderer.drawWithGlobalProgram(buffer.end());
-        GL11.glDepthFunc(GL11.GL_LEQUAL);
-        GL11.glLineWidth(1f);
-        RenderSystem.disableBlend();
-        if (ClickGUI.antiAliasing.getValue()) {
-            GL11.glDisable(GL11.GL_LINE_SMOOTH);
-            GL11.glDisable(GL13.GL_MULTISAMPLE);
-        }
-        stack.pop();
+    private static Box getInterpolatedBox(Entity entity, float tickDelta) {
+        Vec3d currentPos = new Vec3d(entity.getX(), entity.getY(), entity.getZ());
+        Vec3d lerpedPos = entity.getLerpedPos(tickDelta);
+        Vec3d interpOffset = lerpedPos.subtract(currentPos);
+        return entity.getBoundingBox().offset(interpOffset.x, interpOffset.y, interpOffset.z);
     }
 
-    private Color getColor(int alpha) {
-        int red = ClickGUI.red.getValueInt();
-        int green = ClickGUI.green.getValueInt();
-        int blue = ClickGUI.blue.getValueInt();
-
-
-        return new Color(red, green, blue, alpha);
+    private Color rgba(int alpha) {
+        return new Color(
+                ClickGUI.red.getValueInt(),
+                ClickGUI.green.getValueInt(),
+                ClickGUI.blue.getValueInt(),
+                alpha
+        );
     }
 }

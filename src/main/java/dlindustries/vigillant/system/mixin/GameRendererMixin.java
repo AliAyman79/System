@@ -8,6 +8,8 @@ import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.GameRenderer;
 import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.math.RotationAxis;
+import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -25,10 +27,20 @@ public abstract class GameRendererMixin {
 
 	@Inject(method = "renderWorld", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/profiler/Profiler;swap(Ljava/lang/String;)V", ordinal = 1))
 	private void onWorldRender(RenderTickCounter tickCounter, CallbackInfo ci) {
-		float fov = getFov(camera, tickCounter.getTickDelta(true), true);
-		Matrix4f matrix4f = getBasicProjectionMatrix(fov);
+		float tickDelta = tickCounter.getDynamicDeltaTicks();
 		MatrixStack matrixStack = new MatrixStack();
-		EventManager.fire(new GameRenderListener.GameRenderEvent(matrixStack, tickCounter.getTickDelta(true)));
+
+		// Build camera-space world matrix for custom world render modules (ESP, tracers, etc.).
+		if (camera != null) {
+			Vec3d cameraPos = camera.getFocusedEntity() != null
+					? new Vec3d(camera.getFocusedEntity().getX(), camera.getFocusedEntity().getY(), camera.getFocusedEntity().getZ())
+					: Vec3d.ZERO;
+			matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(camera.getPitch()));
+			matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(camera.getYaw() + 180.0F));
+			matrixStack.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
+		}
+
+		EventManager.fire(new GameRenderListener.GameRenderEvent(matrixStack, tickDelta));
 	}
 
 	@Inject(method = "shouldRenderBlockOutline", at = @At("HEAD"), cancellable = true)

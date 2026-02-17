@@ -1,8 +1,8 @@
 package dlindustries.vigillant.system.font;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import lombok.Getter;
-import net.minecraft.client.gl.ShaderProgramKeys;
 import net.minecraft.client.render.*;
 import net.minecraft.client.texture.AbstractTexture;
 import net.minecraft.client.texture.NativeImage;
@@ -122,19 +122,17 @@ public final class GlyphPage {
 
 			ByteBuffer data = BufferUtils.createByteBuffer(bytes.length).put(bytes);
 			data.flip();
-			loadedTexture = new NativeImageBackedTexture(NativeImage.read(data));
+			loadedTexture = new NativeImageBackedTexture(() -> "system_glyph_page", NativeImage.read(data));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
 	public void bindTexture() {
-		RenderSystem.setShaderTexture(0, loadedTexture.getGlId());
-	}
+			}
 
 	public void unbindTexture() {
-		RenderSystem.setShaderTexture(0, 0);
-	}
+			}
 
 	public float drawChar(MatrixStack stack, char ch, float x, float y, float red, float blue, float green, float alpha) {
 		Glyph glyph = glyphCharacterMap.get(ch);
@@ -150,7 +148,6 @@ public final class GlyphPage {
 
 		float width = glyph.width;
 		float height = glyph.height;
-		RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
 		bindTexture();
 
 		BufferBuilder bufferBuilder = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
@@ -160,7 +157,7 @@ public final class GlyphPage {
 		bufferBuilder.vertex(stack.peek().getPositionMatrix(), x + width, y, 0).color(red, green, blue, alpha).texture(pageX + pageWidth, pageY);
 		bufferBuilder.vertex(stack.peek().getPositionMatrix(), x, y, 0).color(red, green, blue, alpha).texture(pageX, pageY);
 
-		BufferRenderer.drawWithGlobalProgram(bufferBuilder.end());
+		bufferBuilder.end();
 
 		unbindTexture();
 

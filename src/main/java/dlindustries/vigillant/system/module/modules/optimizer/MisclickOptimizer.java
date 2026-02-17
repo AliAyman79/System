@@ -10,7 +10,7 @@ import dlindustries.vigillant.system.utils.BlockUtils;
 import dlindustries.vigillant.system.utils.EncryptedString;
 import net.minecraft.block.Blocks;
 import net.minecraft.item.Items;
-import net.minecraft.item.SwordItem;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.util.hit.BlockHitResult;
 
 
@@ -83,7 +83,7 @@ public final class MisclickOptimizer extends Module implements ItemUseListener, 
 				event.cancel();
 
 			if (BlockUtils.isBlock(hit.getBlockPos(), Blocks.ENDER_CHEST) && echestClick.getValue() &&
-					(mc.player.getMainHandStack().getItem() instanceof SwordItem
+					(mc.player.getMainHandStack().isIn(ItemTags.SWORDS)
 							|| mc.player.getMainHandStack().getItem() == Items.END_CRYSTAL
 							|| mc.player.getMainHandStack().getItem() == Items.OBSIDIAN
 							|| mc.player.getMainHandStack().getItem() == Items.RESPAWN_ANCHOR

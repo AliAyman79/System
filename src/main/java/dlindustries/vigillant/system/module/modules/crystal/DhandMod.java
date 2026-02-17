@@ -48,10 +48,10 @@ public final class DhandMod extends Module implements TickListener {
 
         int totemSlot = module.slotSetting.getValueInt() - 1;
 
-        if (client.player.getInventory().selectedSlot == totemSlot) {
+        if (client.player.getInventory().getSelectedSlot() == totemSlot) {
             client.setScreen(new InventoryScreen(client.player));
         } else {
-            client.player.getInventory().selectedSlot = totemSlot;
+            client.player.getInventory().setSelectedSlot(totemSlot);
             module.shouldOpenInventory = true;
             module.delayTicksRemaining = (int) Math.ceil(module.delaySetting.getValue() / 50f);
         }

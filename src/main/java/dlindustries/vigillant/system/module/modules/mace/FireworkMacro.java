@@ -83,7 +83,7 @@ public class FireworkMacro extends Module implements TickListener {
                 switchClock++;
                 return;
             }
-            mc.player.getInventory().selectedSlot = fireworkSlot.getValueInt() - 1;
+            mc.player.getInventory().setSelectedSlot(fireworkSlot.getValueInt() - 1);
             hasSwitched = true;
             switchClock = 0;
         } else if (!hasUsed) {
@@ -99,7 +99,7 @@ public class FireworkMacro extends Module implements TickListener {
                 switchBackClock++;
                 return;
             }
-            mc.player.getInventory().selectedSlot = restoreSlot.getValueInt() - 1;
+            mc.player.getInventory().setSelectedSlot(restoreSlot.getValueInt() - 1);
             hasSwitchedBack = true;
             reset();
         }

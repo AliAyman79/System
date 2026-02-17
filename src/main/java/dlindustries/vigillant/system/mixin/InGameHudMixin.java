@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class InGameHudMixin {
 	@Inject(method = "render", at = @At("HEAD"))
 	private void onRenderHud(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
-		HudListener.HudEvent event = new HudListener.HudEvent(context, tickCounter.getTickDelta(true));
+		HudListener.HudEvent event = new HudListener.HudEvent(context, tickCounter.getDynamicDeltaTicks());
 
 		EventManager.fire(event);
 	}

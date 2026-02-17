@@ -53,7 +53,7 @@ public final class KeyWindCharge extends Module implements TickListener {
 
         if(active) {
             if(previousSlot == -1)
-                previousSlot = mc.player.getInventory().selectedSlot;
+                previousSlot = mc.player.getInventory().getSelectedSlot();
 
             InventoryUtils.selectItemFromHotbar(Items.WIND_CHARGE);
 

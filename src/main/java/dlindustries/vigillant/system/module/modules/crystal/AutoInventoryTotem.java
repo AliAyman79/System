@@ -86,10 +86,10 @@ public final class AutoInventoryTotem extends Module implements TickListener {
 		PlayerInventory inventory = mc.player.getInventory();
 
 		if (autoSwitch.getValue())
-			inventory.selectedSlot = totemSlot.getValueInt() - 1;
+			inventory.setSelectedSlot(totemSlot.getValueInt() - 1);
 
 		if (clock <= 0) {
-			if (inventory.offHand.get(0).getItem() != Items.TOTEM_OF_UNDYING) {
+			if (mc.player.getOffHandStack().getItem() != Items.TOTEM_OF_UNDYING) {
 				int slot = mode.isMode(Mode.Blatant) ? InventoryUtils.findTotemSlot() : InventoryUtils.findRandomTotemSlot();
 
 				if (slot != -1) {
@@ -104,7 +104,7 @@ public final class AutoInventoryTotem extends Module implements TickListener {
 					int slot = mode.isMode(Mode.Blatant) ? InventoryUtils.findTotemSlot() : InventoryUtils.findRandomTotemSlot();
 
 					if (slot != -1) {
-						mc.interactionManager.clickSlot(((InventoryScreen) mc.currentScreen).getScreenHandler().syncId, slot, inventory.selectedSlot, SlotActionType.SWAP, mc.player);
+						mc.interactionManager.clickSlot(((InventoryScreen) mc.currentScreen).getScreenHandler().syncId, slot, inventory.getSelectedSlot(), SlotActionType.SWAP, mc.player);
 						return;
 					}
 				}

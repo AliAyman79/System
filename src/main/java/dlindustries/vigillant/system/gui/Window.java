@@ -22,7 +22,6 @@ public final class Window {
 	private final Category category;
 	public boolean dragging, extended;
 	private int dragX, dragY;
-	private int prevX, prevY;
 	public ClickGui parent;
 
 	public Window(int x, int y, int width, int height, Category category, ClickGui parent) {
@@ -34,9 +33,6 @@ public final class Window {
 		this.height = height;
 		this.category = category;
 		this.parent = parent;
-
-		this.prevX = x;
-		this.prevY = y;
 
 		int offset = height;
 		List<Module> sortedModules = new ArrayList<>(system.INSTANCE.getModuleManager().getModulesInCategory(category));
@@ -57,16 +53,60 @@ public final class Window {
 		if (currentColor.getAlpha() != toAlpha)
 			currentColor = ColorUtils.smoothAlphaTransition(0.05F, toAlpha, currentColor);
 
-		RenderUtils.renderRoundedQuad(context.getMatrices(), currentColor, prevX, prevY, prevX + width, prevY + height, ClickGUI.roundQuads.getValueInt(), ClickGUI.roundQuads.getValueInt(), 0, 0, 50);
-		context.fill(prevX, prevY + (height - 2), prevX + width, prevY + height, Utils.getMainColor(255, moduleButtons.indexOf(moduleButtons.get(0))).getRGB());
+		updateButtons(delta);
+		int contentHeight = getContentHeight();
+		Color headerColor = new Color(0, 0, 0, Math.min(255, currentColor.getAlpha() + 25));
+		Color outlineColor = new Color(90, 90, 90, Math.min(255, currentColor.getAlpha() + 40));
 
-		int charOffset = (prevX + (width / 2));
+		// Draw one continuous frame that contains header + module list.
+		RenderUtils.renderRoundedQuad(
+				context.getMatrices(),
+				currentColor,
+				x,
+				y,
+				x + width,
+				y + contentHeight,
+				ClickGUI.roundQuads.getValueInt(),
+				ClickGUI.roundQuads.getValueInt(),
+				ClickGUI.roundQuads.getValueInt(),
+				ClickGUI.roundQuads.getValueInt(),
+				50
+		);
+		// Keep the category bar visible as a separate framed header.
+		RenderUtils.renderRoundedQuad(
+				context.getMatrices(),
+				headerColor,
+				x,
+				y,
+				x + width,
+				y + height,
+				ClickGUI.roundQuads.getValueInt(),
+				ClickGUI.roundQuads.getValueInt(),
+				0,
+				0,
+				50
+		);
+		RenderUtils.renderRoundedOutline(
+				context,
+				outlineColor,
+				x,
+				y,
+				x + width,
+				y + contentHeight,
+				ClickGUI.roundQuads.getValueInt(),
+				ClickGUI.roundQuads.getValueInt(),
+				ClickGUI.roundQuads.getValueInt(),
+				ClickGUI.roundQuads.getValueInt(),
+				1.2,
+				30
+		);
+		context.fill(x, y + (height - 2), x + width, y + height, Utils.getMainColor(255, 0).getRGB());
+
+		int charOffset = (x + (width / 2));
 		int totalWidth = TextRenderer.getWidth(category.name);
 		int startX = charOffset - (totalWidth / 2);
 
-		TextRenderer.drawString(category.name, context, startX, prevY + 6, Color.WHITE.getRGB());
-
-		updateButtons(delta);
+		TextRenderer.drawString(category.name, context, startX, y + 6, Color.WHITE.getRGB());
 
 		for (ModuleButton moduleButton : moduleButtons)
 			moduleButton.render(context, mouseX, mouseY, delta);
@@ -149,19 +189,31 @@ public final class Window {
 	}
 
 	public void mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-		prevX = x;
-		prevY = y;
-
-		this.prevY = (int) (prevY + (verticalAmount * 20));
 		this.setY((int) (y + (verticalAmount * 20)));
 	}
 
+	public boolean isContentHovered(double mouseX, double mouseY) {
+		return mouseX > x
+				&& mouseX < x + width
+				&& mouseY > y
+				&& mouseY < y + getContentHeight();
+	}
+
+	private int getContentHeight() {
+		int total = height;
+		for (ModuleButton moduleButton : moduleButtons) {
+			double animatedHeight = moduleButton.animation.getValue();
+			total += (int) Math.max(height, Math.round(animatedHeight));
+		}
+		return total;
+	}
+
 	public int getX() {
-		return prevX;
+		return x;
 	}
 
 	public int getY() {
-		return prevY;
+		return y;
 	}
 
 	public void setY(int y) {
@@ -185,16 +237,13 @@ public final class Window {
 	}
 
 	public boolean isPrevHovered(double mouseX, double mouseY) {
-		return ((mouseX > prevX && mouseX < prevX + width) && (mouseY > prevY && mouseY < prevY + height));
+		return isHovered(mouseX, mouseY);
 	}
 
 	public void updatePosition(double mouseX, double mouseY, float delta) {
-		prevX = x;
-		prevY = y;
-
 		if (dragging) {
-			x = (int) MathUtils.goodLerp((float) 0.3 * delta, isHovered(mouseX, mouseY) ? x : prevX, mouseX - dragX);
-			y = (int) MathUtils.goodLerp((float) 0.3 * delta, isHovered(mouseX, mouseY) ? y : prevY, mouseY - dragY);
+			x = (int) MathUtils.goodLerp((float) 0.3 * delta, x, mouseX - dragX);
+			y = (int) MathUtils.goodLerp((float) 0.3 * delta, y, mouseY - dragY);
         }
 	}
 }

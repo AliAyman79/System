@@ -9,6 +9,7 @@ import dlindustries.vigillant.system.module.setting.NumberSetting;
 import dlindustries.vigillant.system.utils.EncryptedString;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.*;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 
@@ -46,14 +47,15 @@ public final class HitOptimizer extends Module implements AttackListener, TickLi
     public void onDisable() {
         eventManager.remove(AttackListener.class, this);
         eventManager.remove(TickListener.class, this);
-        if (shouldSwitchBack && originalSlot != -1) {
-            mc.player.getInventory().selectedSlot = originalSlot;
+        if (mc.player != null && shouldSwitchBack && originalSlot != -1) {
+            mc.player.getInventory().setSelectedSlot(originalSlot);
         }
         super.onDisable();
     }
 
     @Override
     public void onAttack(AttackEvent event) {
+        if (mc.player == null) return;
         if (mc.crosshairTarget == null || mc.crosshairTarget.getType() != HitResult.Type.ENTITY) return;
 
         Entity target = ((EntityHitResult) mc.crosshairTarget).getEntity();
@@ -75,11 +77,11 @@ public final class HitOptimizer extends Module implements AttackListener, TickLi
 
 
             if (switchBack.getValue() && originalSlot == -1) {
-                originalSlot = mc.player.getInventory().selectedSlot;
+                originalSlot = mc.player.getInventory().getSelectedSlot();
             }
 
 
-            mc.player.getInventory().selectedSlot = swordSlot;
+            mc.player.getInventory().setSelectedSlot(swordSlot);
 
 
             if (switchBack.getValue()) {
@@ -91,6 +93,10 @@ public final class HitOptimizer extends Module implements AttackListener, TickLi
 
     @Override
     public void onTick() {
+        if (mc.player == null) {
+            resetState();
+            return;
+        }
         if (!shouldSwitchBack || originalSlot == -1) return;
 
         if (switchTimer < switchDelay.getValueInt()) {
@@ -99,7 +105,7 @@ public final class HitOptimizer extends Module implements AttackListener, TickLi
         }
 
 
-        mc.player.getInventory().selectedSlot = originalSlot;
+        mc.player.getInventory().setSelectedSlot(originalSlot);
         resetState();
     }
 
@@ -111,7 +117,7 @@ public final class HitOptimizer extends Module implements AttackListener, TickLi
 
     private boolean isWeapon(ItemStack stack) {
         Item item = stack.getItem();
-        return item instanceof SwordItem ||
+        return stack.isIn(ItemTags.SWORDS) ||
                 item instanceof AxeItem ||
                 item instanceof MaceItem ||
                 item == Items.ELYTRA ||
@@ -126,7 +132,7 @@ public final class HitOptimizer extends Module implements AttackListener, TickLi
     private int findSwordSlot() {
         for (int slot = 0; slot < 9; slot++) {
             ItemStack stack = mc.player.getInventory().getStack(slot);
-            if (stack.getItem() instanceof SwordItem) {
+            if (stack.isIn(ItemTags.SWORDS)) {
                 return slot;
             }
         }
