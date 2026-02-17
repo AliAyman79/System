@@ -13,7 +13,13 @@
 
 <a href="https://discord.gg/yynpznJVkC"><img src="https://invidget.switchblade.xyz/yynpznJVkC" alt="https://discord.gg/yynpznJVkC"/></a><br>
 
-## Mod description
+## THIS PORT IS HIGHlY EXPERIMENTAL AND POTENTIALLY UNSTABLE. REPORT BUGS
+
+features removed for stability
+- Tracers
+- NameTags
+
+
 
 </div>
 
