@@ -31,7 +31,7 @@ public final class ClickGui extends Screen {
 		super(Text.empty());
 		int offsetX = 50;
 		for (Category category : Category.values()) {
-			windows.add(new Window(offsetX, 50, 230, 30, category, this));
+			windows.add(new Window(offsetX, 35, 160, 20, category, this));
 			offsetX += 250;
 		}
 	}
